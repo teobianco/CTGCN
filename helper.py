@@ -6,6 +6,7 @@ import os
 import json
 import torch
 from utils import get_normalized_adj, get_sp_adj_mat, sparse_mx_to_torch_sparse_tensor
+import networkx as nx
 
 
 # A class which is designed for loading various kinds of data
@@ -31,7 +32,15 @@ class DataLoader:
         date_adj_list = []
         for i in range(start_idx, min(start_idx + duration, self.max_time_num)):
             original_graph_path = os.path.join(origin_base_path, date_dir_list[i])
-            spmat = get_sp_adj_mat(original_graph_path, self.full_node_list, sep=sep)
+            with open(original_graph_path, 'r') as file:
+                G = nx.Graph()
+                G.add_nodes_from(self.full_node_list)  # Verificare come funge
+                for line in file:
+                    node1, node2 = map(int, line.strip().split())
+                    # edges = [[mapping[u], mapping[v]] for u, v in edges]
+                    G.add_edge(node1, node2, weight=1)  # Devo fare il mapping
+                spmat = nx.to_scipy_sparse_matrix(G, nodelist=self.full_node_list)
+            # spmat = get_sp_adj_mat(original_graph_path, self.full_node_list, sep=sep)
             # spmat = sp.coo_matrix((np.exp(alpha * spmat.data), (spmat.row, spmat.col)), shape=(self.node_num, self.node_num))
             if add_eye:
                 spmat = spmat + sp.eye(spmat.shape[0])
@@ -45,6 +54,21 @@ class DataLoader:
                 date_adj_list.append(spmat)
         # print(len(date_adj_list))
         return date_adj_list
+
+    def get_date_label_list(self, label_base_path, start_idx, duration, sep='\t'):
+        label_file_list = sorted(os.listdir(label_base_path))
+        label_list = []
+        for i in range(start_idx, min(start_idx + duration, self.max_time_num)):
+            label_file_path = os.path.join(label_base_path, label_file_list[i])
+            with open(label_file_path) as file:
+                comm = dict()
+                for line in file:
+                    node, community = line.split()
+                    comm[self.node2idx_dict[int(node)]] = int(community)  # Manca mapping dei nodi
+            # df_label = pd.read_csv(label_file_path, sep=sep, header=0)
+            # label_arr = df_label.values
+            label_list.append(comm)
+        return label_list
 
     # get k-core sub-graph adjacent matrices for a graph list, it is a 2-layer nested list, outer layer for graph, inner layer for k-cores.
     # k-core subgraphs will be automatically normalized by 'renormalization trick'(add_eye=True)

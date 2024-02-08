@@ -42,10 +42,11 @@ class DynGEMLoss(nn.Module):
     beta: float
     regularization: RegularizationLoss
 
-    def __init__(self, alpha, beta, nu1, nu2):
+    def __init__(self, alpha, beta, gamma, nu1, nu2):
         super(DynGEMLoss, self).__init__()
         self.alpha = alpha
         self.beta = beta
+        self.gamma = gamma
         self.regularization = RegularizationLoss(nu1, nu2)
 
     def forward(self, model, input_list):
@@ -53,15 +54,37 @@ class DynGEMLoss(nn.Module):
         xi_pred, x_i, penalty_i = input_list[0], input_list[1], input_list[2]
         xj_pred, x_j, penalty_j = input_list[3], input_list[4], input_list[5]
         hx_i, hx_j, edge_weight = input_list[6], input_list[7], input_list[8]
+        labels = input_list[9]  # Dizionario
 
         node_num = xj_pred.shape[1]
         xi_loss = torch.mean(torch.sum(torch.square((xi_pred - x_i) * penalty_i[:, 0:node_num]), dim=1) / penalty_i[:, node_num])
         xj_loss = torch.mean(torch.sum(torch.square((xj_pred - x_j) * penalty_j[:, 0:node_num]), dim=1) / penalty_j[:, node_num])
         hx_loss = torch.mean(torch.sum(torch.square(hx_i - hx_j), dim=1) * edge_weight)
-
+        # Part for label loss
+        labels = torch.tensor([labels[node_id] for node_id in range(len(hx_i))])
+        grouped_hx_i = []
+        for label in torch.unique(labels):
+            mask = labels == label  # Maschera booleana per selezionare i nodi con la label corrente
+            grouped_hx_i.append(hx_i[mask])
+        grouped_hx_i = torch.cat(grouped_hx_i, dim=0)
+        diff = grouped_hx_i.unsqueeze(0) - grouped_hx_i.unsqueeze(1)
+        label_loss = torch.sum(diff ** 2) / diff.numel()
+        # label_loss = 0
+        # # Concat hx_i and hx_j
+        # hx = torch.cat((hx_i, hx_j), dim=0)
+        # # Merge dictionaries label_i and label_j
+        # label = label_i.extend(label_j)  #VERIFICARE SE FUNZIONA PER I DIZIONARI
+        # for el in label.values():
+        #     if el != -1:
+        #         ids = [k for k, v in label.items() if v == el]
+        #         for i in range(len(ids)):
+        #             for j in range(i + 1, len(ids)):
+        #                 label_loss += torch.square(hx[ids[i]] - hx[ids[j]])
+        # label_loss = torch.mean(label_loss)
         reconstruction_loss = xi_loss + xj_loss + self.alpha * hx_loss
+        label_loss = self.gamma * label_loss
         regularization_loss = self.regularization(model)
-        return reconstruction_loss + regularization_loss
+        return reconstruction_loss + label_loss + regularization_loss
 
 
 # Batch generator used for DynGEM
@@ -73,15 +96,16 @@ class DynGEMBatchGenerator:
     shuffle: bool
     has_cuda: bool
 
-    def __init__(self, node_list, batch_size, beta, shuffle=True, has_cuda=False):
+    def __init__(self, node_list, batch_size, beta, frac_train, shuffle=True, has_cuda=False):
         self.node_list = node_list
         self.node_num = len(node_list)
         self.batch_size = batch_size
         self.beta = beta
         self.shuffle = shuffle
         self.has_cuda = has_cuda
+        self.frac_train = frac_train
 
-    def generate(self, graph: sp.lil_matrix):
+    def generate(self, graph: sp.lil_matrix, label_dict):
         if isinstance(graph, list):
             assert len(graph) == 1
             graph = graph[0]
@@ -103,7 +127,11 @@ class DynGEMBatchGenerator:
             yi_batch = torch.ones(xi_batch.shape, device=xi_batch.device)  # penalty tensor for x_i
             yj_batch = torch.ones(xj_batch.shape, device=xi_batch.device)  # penalty tensor for x_j
             value_batch = torch.tensor(values[batch_indices], device=xi_batch.device).unsqueeze(1).float()  # [batch_size * 1]
-
+            label_batch = {i: label_dict[i] for i in batch_indices}
+            num_el_to_hide = len(label_batch.values()) * (1 - self.frac_train)
+            # Randomly change values of num_el_to_hide elements of label batch to -1
+            for i in range(int(num_el_to_hide)):
+                label_batch[np.random.choice(list(label_batch.keys()))] = -1
             yi_batch[xi_batch != 0] = self.beta
             yj_batch[xj_batch != 0] = self.beta
             xi_degree_batch = torch.sum(xi_batch, dim=1).unsqueeze(1)  # [batch_size * 1]
@@ -112,7 +140,7 @@ class DynGEMBatchGenerator:
             yi_batch = torch.cat((yi_batch, xi_degree_batch), dim=1)
             yj_batch = torch.cat((yj_batch, xj_degree_batch), dim=1)
             counter += 1
-            yield [xi_batch, xj_batch], [yi_batch, yj_batch, value_batch]
+            yield [xi_batch, xj_batch], [yi_batch, yj_batch, value_batch, label_batch]
 
             if counter == batch_num:
                 if self.shuffle:

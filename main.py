@@ -45,7 +45,8 @@ def embedding_task(method, args):
     args['has_cuda'] = True if torch.cuda.is_available() else False
 
     if not args['has_cuda'] and 'use_cuda' in args and args['use_cuda']:
-        raise Exception('No CUDA devices is available, but you still try to use CUDA!')
+        # raise Exception('No CUDA devices is available, but you still try to use CUDA!')
+        args['use_cuda'] = False
     if 'use_cuda' in args:
         args['has_cuda'] &= args['use_cuda']
     if not args['has_cuda']:  # Use CPU

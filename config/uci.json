@@ -532,6 +532,7 @@
     {
       "base_path": "/data/uci",
       "origin_folder": "1.format",
+      "label_folder": "3.label",
       "embed_folder": "2.embedding/DynGEM",
       "model_folder": "CTGCN/model",
       "model_file": "dyngem",
@@ -545,7 +546,8 @@
       "thread_num": 30,
       "epoch": 50,
       "lr": 1e-3,
-      "batch_size": 4096,
+      "batch_size": 200,
+      "frac_train": 0.5,
       "load_model": true,
       "shuffle": true,
       "export": true,
@@ -553,6 +555,7 @@
       "n_units": [500, 300],
       "alpha": 1e-5,
       "beta": 10,
+      "gamma": 1,
       "nu1": 1e-4,
       "nu2": 1e-4,
       "bias": true
