@@ -90,6 +90,11 @@ def similarity_prediction_task(args):
     similarity_prediction(args)
 
 
+def community_detection_task(args):
+    from evaluation.community_detection import evaluate_community_detection
+    evaluate_community_detection(args)
+
+
 # The main function of the CTGCN project
 def main(argv):
     args = parse_args(argv[1:])
