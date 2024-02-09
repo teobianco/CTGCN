@@ -50,22 +50,25 @@ class DynGEMLoss(nn.Module):
         self.regularization = RegularizationLoss(nu1, nu2)
 
     def forward(self, model, input_list):
-        assert len(input_list) == 9
+        assert len(input_list) == 11
         xi_pred, x_i, penalty_i = input_list[0], input_list[1], input_list[2]
         xj_pred, x_j, penalty_j = input_list[3], input_list[4], input_list[5]
         hx_i, hx_j, edge_weight = input_list[6], input_list[7], input_list[8]
         labels = input_list[9]  # Dizionario
+        nodes = input_list[10]
 
         node_num = xj_pred.shape[1]
         xi_loss = torch.mean(torch.sum(torch.square((xi_pred - x_i) * penalty_i[:, 0:node_num]), dim=1) / penalty_i[:, node_num])
         xj_loss = torch.mean(torch.sum(torch.square((xj_pred - x_j) * penalty_j[:, 0:node_num]), dim=1) / penalty_j[:, node_num])
         hx_loss = torch.mean(torch.sum(torch.square(hx_i - hx_j), dim=1) * edge_weight)
         # Part for label loss
-        labels = torch.tensor([labels[node_id] for node_id in range(len(hx_i))])
+        labels = torch.tensor([labels[node_id] for node_id in nodes])
+        # labels = torch.tensor(labels.values())
         grouped_hx_i = []
         for label in torch.unique(labels):
-            mask = labels == label  # Maschera booleana per selezionare i nodi con la label corrente
-            grouped_hx_i.append(hx_i[mask])
+            if label != -1:
+                mask = labels == label  # Maschera booleana per selezionare i nodi con la label corrente
+                grouped_hx_i.append(hx_i[mask])
         grouped_hx_i = torch.cat(grouped_hx_i, dim=0)
         diff = grouped_hx_i.unsqueeze(0) - grouped_hx_i.unsqueeze(1)
         label_loss = torch.sum(diff ** 2) / diff.numel()
@@ -127,7 +130,14 @@ class DynGEMBatchGenerator:
             yi_batch = torch.ones(xi_batch.shape, device=xi_batch.device)  # penalty tensor for x_i
             yj_batch = torch.ones(xj_batch.shape, device=xi_batch.device)  # penalty tensor for x_j
             value_batch = torch.tensor(values[batch_indices], device=xi_batch.device).unsqueeze(1).float()  # [batch_size * 1]
-            label_batch = {i: label_dict[i] for i in batch_indices}
+            label_batch = dict()
+            batch_nodes = []
+            # print('Len batch indices: ', len(batch_indices))
+            # print('Shape rows[batch_indices]: ', rows[batch_indices].shape)
+            for i in rows[batch_indices]:
+                label_batch[i] = label_dict[0][i]
+                batch_nodes.append(i)
+            # label_batch = {i: label_dict[i] for i in batch_indices}
             num_el_to_hide = len(label_batch.values()) * (1 - self.frac_train)
             # Randomly change values of num_el_to_hide elements of label batch to -1
             for i in range(int(num_el_to_hide)):
@@ -140,7 +150,7 @@ class DynGEMBatchGenerator:
             yi_batch = torch.cat((yi_batch, xi_degree_batch), dim=1)
             yj_batch = torch.cat((yj_batch, xj_degree_batch), dim=1)
             counter += 1
-            yield [xi_batch, xj_batch], [yi_batch, yj_batch, value_batch, label_batch]
+            yield [xi_batch, xj_batch], [yi_batch, yj_batch, value_batch, label_batch, batch_nodes]
 
             if counter == batch_num:
                 if self.shuffle:

@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from embedding import BaseEmbedding
 from helper import DataLoader
+from evaluation import community_detection as cd
 
 # dyngraph2vec: Capturing Network Dynamics using Dynamic Graph Representation Learning. For more information, please refer to https://arxiv.org/abs/1809.02657
 # We refer to the dyngraph2vec tensorflow source code https://github.com/palash1992/DynamicGEM, and implement a pytorch version of dyngraph2vec
@@ -277,10 +278,10 @@ class DynamicEmbedding(BaseEmbedding):
     def get_model_res(self, model, generator):
         batch_size = self.batch_generator.batch_size
         if model.method_name == 'DynGEM':
-            [xi_batch, xj_batch], [yi_batch, yj_batch, value_batch, labels] = next(generator)
+            [xi_batch, xj_batch], [yi_batch, yj_batch, value_batch, labels, nodes] = next(generator)
             hx_i, xi_pred = model(xi_batch)
             hx_j, xj_pred = model(xj_batch)
-            loss_input_list = [xi_pred, xi_batch, yi_batch, xj_pred, xj_batch, yj_batch, hx_i, hx_j, value_batch, labels]
+            loss_input_list = [xi_pred, xi_batch, yi_batch, xj_pred, xj_batch, yj_batch, hx_i, hx_j, value_batch, labels, nodes]
         else:
             x_pre_batches, x_cur_batch, y_batch = next(generator)
             # DynAE uses 2D tensor as its input
@@ -290,7 +291,7 @@ class DynamicEmbedding(BaseEmbedding):
             loss_input_list = [x_pred_batch, x_cur_batch, y_batch]
         return loss_input_list
 
-    def learn_embedding(self, adj_list, label_list, epoch=50, lr=1e-3, idx=0, weight_decay=0., model_file='dynAE', load_model=False, export=True):
+    def learn_embedding(self, adj_list, label_list, active_nodes, epoch=50, lr=1e-3, idx=0, weight_decay=0., model_file='dynAE', load_model=False, export=True):
         print('start learning embedding!')
         model, loss_model, optimizer, _ = self.prepare(load_model, model_file, classifier_file=None, lr=lr, weight_decay=weight_decay)
         batch_size, batch_num, train_size = self.get_batch_info(adj_list, model)  #batch_num viene strano (208)
@@ -343,6 +344,8 @@ def dyngem_embedding(method, args):
     label_folder = args['label_folder']
     embedding_folder = args['embed_folder']
     model_folder = args['model_folder']
+    community_folder = args['community_folder']
+    score_folder = args['score_folder']
     model_file = args['model_file']
     node_file = args['node_file']
     file_sep = args['file_sep']
@@ -381,6 +384,8 @@ def dyngem_embedding(method, args):
 
     origin_base_path = os.path.abspath(os.path.join(base_path, origin_folder))
     label_base_path = os.path.abspath(os.path.join(base_path, label_folder))
+    community_base_path = os.path.abspath(os.path.join(base_path, community_folder))
+    score_base_path = os.path.abspath(os.path.join(base_path, score_folder))
     max_time_num = len(os.listdir(origin_base_path))
     node_path = os.path.abspath(os.path.join(base_path, node_file))
     # Create file nodes.csv if it does not exist
@@ -431,7 +436,7 @@ def dyngem_embedding(method, args):
         # As DynGEM, DynAE, DynRNN, DynAERNN use original adjacent matrices as their input, so normalization is not necessary(normalization=Fals, add_eye=False) !
         adj_list = data_loader.get_date_adj_list(origin_base_path, start_idx=idx - duration + 1, duration=duration, sep=file_sep, normalize=False, add_eye=False, data_type='matrix')
         adj_list = [adj.tolil() for adj in adj_list]
-        label_list = data_loader.get_date_label_list(label_base_path, start_idx=idx - duration + 1, duration=duration, sep=file_sep)
+        label_list, active_nodes = data_loader.get_date_label_list(label_base_path, start_idx=idx - duration + 1, duration=duration, sep=file_sep)
         model = model_dict[method](input_dim=node_num, output_dim=embed_dim, look_back=look_back, n_units=n_units, ae_units=ae_units, rnn_units=rnn_units, bias=bias)
         if method == 'DynGEM':
             loss = DynGEMLoss(alpha=alpha, beta=beta, gamma=gamma, nu1=nu1, nu2=nu2)
@@ -443,8 +448,15 @@ def dyngem_embedding(method, args):
             batch_predictor = BatchPredictor(node_list=node_list, batch_size=batch_size, has_cuda=has_cuda)
         trainer = DynamicEmbedding(base_path=base_path, origin_folder=origin_folder, embedding_folder=embedding_folder, node_list=nodes_set['node'].tolist(), model=model, loss=loss,
                                              batch_generator=batch_generator, batch_predictor=batch_predictor, model_folder=model_folder, has_cuda=has_cuda)
-        cost_time = trainer.learn_embedding(adj_list, label_list, epoch=epoch, lr=lr, idx=idx, model_file=model_file, load_model=load_model, export=export)
+        cost_time = trainer.learn_embedding(adj_list, label_list, active_nodes, epoch=epoch, lr=lr, idx=idx, model_file=model_file, load_model=load_model, export=export)
         time_list.append(cost_time)
+        # COMMUNITY DETECTION
+        emb = pd.read_csv(os.path.join(base_path, embedding_folder, f'graph{idx}.csv'), sep='\t', index_col=0)
+        active_filter = nodes_set.loc[active_nodes, 'node'].tolist()
+        emb = emb.reindex(index=active_filter)
+        # emb = emb.loc[active_nodes]
+        emb_dim = emb.shape[1]
+        cd.evaluate_community_detection(label_list[-1], emb, active_nodes, community_base_path, score_base_path, idx, emb_dim)
 
     # record time cost of DynGEM, DynAE, DynRNN, DynAERNN
     if record_time:

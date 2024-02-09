@@ -58,6 +58,7 @@ class DataLoader:
     def get_date_label_list(self, label_base_path, start_idx, duration, sep='\t'):
         label_file_list = sorted(os.listdir(label_base_path))
         label_list = []
+        active_nodes = []
         for i in range(start_idx, min(start_idx + duration, self.max_time_num)):
             label_file_path = os.path.join(label_base_path, label_file_list[i])
             with open(label_file_path) as file:
@@ -65,10 +66,11 @@ class DataLoader:
                 for line in file:
                     node, community = line.split()
                     comm[self.node2idx_dict[int(node)]] = int(community)  # Manca mapping dei nodi
+                    active_nodes.append(self.node2idx_dict[int(node)])
             # df_label = pd.read_csv(label_file_path, sep=sep, header=0)
             # label_arr = df_label.values
             label_list.append(comm)
-        return label_list
+        return label_list, active_nodes
 
     # get k-core sub-graph adjacent matrices for a graph list, it is a 2-layer nested list, outer layer for graph, inner layer for k-cores.
     # k-core subgraphs will be automatically normalized by 'renormalization trick'(add_eye=True)
