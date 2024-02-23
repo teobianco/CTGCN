@@ -123,6 +123,58 @@ class ReconstructionLoss(nn.Module):
         return structure_loss
 
 
+class SemiSupervisedLoss(nn.Module):
+
+    def __init__(self, time_length, model):
+        super(SemiSupervisedLoss, self).__init__()
+        self.time_length = time_length
+        self.model = model
+
+    def forward(self, input_list, labels):
+        if self.model.method_name == 'CTGCN-S':
+            assert len(input_list) == 3
+            embeddings, batch_indices = input_list[0], input_list[2]
+        elif self.model.method_name == 'CTGCN-C':
+            assert len(input_list) == 2
+            embeddings, batch_indices = input_list[0], input_list[1]
+        loss = 0
+        for i in range(self.time_length):
+            # batch_labels = labels[i][batch_indices]
+            batch_labels = torch.tensor([labels[i].get(key.item()) for key in batch_indices], dtype=torch.int32)
+            # print('tensor: ', batch_indices)
+            # print('list: ', batch_labels)
+            embedding = embeddings[i][batch_indices]
+            loss += self.__embeddings_diff_loss(embedding, batch_labels)
+        return loss
+
+    # @staticmethod
+    # def __embeddings_diff_loss(embedding, batch_labels):
+    #     grouped_hx_i = []
+    #     for label in torch.unique(batch_labels):
+    #         if label != -1:
+    #             mask = batch_labels == label  # Maschera booleana per selezionare i nodi con la label corrente
+    #             grouped_hx_i.append(embedding[mask])
+    #     grouped_hx_i = torch.cat(grouped_hx_i, dim=0)
+    #     diff = grouped_hx_i.unsqueeze(0) - grouped_hx_i.unsqueeze(1)
+    #     label_loss = torch.sum(diff ** 2) / diff.numel()
+    #     return label_loss
+
+    @staticmethod
+    def __embeddings_diff_loss(embedding, batch_labels):
+        # grouped_hx_i = []
+        label_loss = 0
+        num = 0  # Number of different labels with more than one node in the batch. I use it to calculate the average of the label loss
+        for label in torch.unique(batch_labels):
+            if label != -1:
+                mask = batch_labels == label  # Maschera booleana per selezionare i nodi con la label corrente
+                group = embedding[mask]
+                if group.shape[0] != 1:
+                    num += 1
+                    diff = group.unsqueeze(0) - group.unsqueeze(1)
+                    label_loss += (torch.sum(diff ** 2)) / (diff.shape[0] * (diff.shape[0]-1))  # Denominator is the same as (2*math.comb(diff.shape[0],2))
+        return label_loss/num if num != 0 else 0
+
+
 # Variational autoencoder loss function used for VGRNN method
 class VAELoss(nn.Module):
     eps: float

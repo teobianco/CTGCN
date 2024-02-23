@@ -4,6 +4,7 @@ import sys
 import json
 import torch
 import argparse
+import numpy as np
 from utils import get_supported_methods
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1, 2, 3'
@@ -132,4 +133,8 @@ def main(argv):
 
 
 if __name__ == '__main__':
+    # Set random seed
+    torch.manual_seed(150799)
+    np.random.seed(150799)
+    #Execute code
     main(sys.argv)

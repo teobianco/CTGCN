@@ -58,19 +58,25 @@ class DataLoader:
     def get_date_label_list(self, label_base_path, start_idx, duration, sep='\t'):
         label_file_list = sorted(os.listdir(label_base_path))
         label_list = []
-        active_nodes = []
+        active_nodes_list = []
         for i in range(start_idx, min(start_idx + duration, self.max_time_num)):
+            active_nodes = []
             label_file_path = os.path.join(label_base_path, label_file_list[i])
             with open(label_file_path) as file:
                 comm = dict()
                 for line in file:
                     node, community = line.split()
-                    comm[self.node2idx_dict[int(node)]] = int(community)  # Manca mapping dei nodi
+                    comm[self.node2idx_dict[int(node)]] = int(community)
                     active_nodes.append(self.node2idx_dict[int(node)])
             # df_label = pd.read_csv(label_file_path, sep=sep, header=0)
             # label_arr = df_label.values
+            nodes = comm.keys()
+            for node in self.full_node_list:
+                if self.node2idx_dict[node] not in nodes:
+                    comm[self.node2idx_dict[node]] = -1
             label_list.append(comm)
-        return label_list, active_nodes
+            active_nodes_list.append(active_nodes)
+        return label_list, active_nodes_list
 
     # get k-core sub-graph adjacent matrices for a graph list, it is a 2-layer nested list, outer layer for graph, inner layer for k-cores.
     # k-core subgraphs will be automatically normalized by 'renormalization trick'(add_eye=True)
@@ -166,7 +172,7 @@ class DataLoader:
             elif init_type == 'combine':
                 fea_list = []
                 for degree in degrees:
-                    fea_list.append(np.random.normal(degree, std, max_degree + 1))
+                    fea_list.append(np.random.normal(degree[0,0], std, max_degree + 1))
                 sp_feat = sp.coo_matrix(np.array(fea_list))
                 sp_feat = sp.hstack((sp_feat, adj_list[i])).astype(np.float32)
                 input_dim = sp_feat.shape[1]

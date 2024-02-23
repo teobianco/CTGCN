@@ -15,13 +15,36 @@ class StructureInfoGenerator:
     full_node_list: list
     node_num: int
 
-    def __init__(self, base_path, origin_folder, core_folder, node_file):
+    def __init__(self, base_path, origin_folder, core_folder, label_folder, node_file):
         self.base_path = base_path
         self.origin_base_path = os.path.abspath(os.path.join(base_path, origin_folder))
         self.core_base_path = os.path.abspath(os.path.join(base_path, core_folder))
+        self.label_base_path = os.path.abspath(os.path.join(base_path, label_folder))
 
         node_path = os.path.abspath(os.path.join(base_path, node_file))
-        nodes_set = pd.read_csv(node_path, names=['node'])
+        try:
+            nodes_set = pd.read_csv(node_path, names=['node'])
+        except FileNotFoundError:
+            all_nodes = set()
+            date_dir_list = sorted(os.listdir(self.label_base_path))
+            max_time_num = len(date_dir_list)
+            for i in range(max_time_num):
+                original_label_path = os.path.join(self.label_base_path, date_dir_list[i])
+                with open(original_label_path, 'r') as file:
+                    print('Graph number ', i)
+                    for line in file:
+                        node, _ = map(int, line.strip().split())
+                        if node not in all_nodes:
+                            all_nodes.add(node)
+            # print('All nodes: ', all_nodes)
+            mapping = {u: i for i, u in enumerate(sorted(all_nodes))}
+            # Create csv file to save this mapping
+            with open(node_path, 'w') as file:
+                # Sort mapping by value
+                sorted_mapping = dict(sorted(mapping.items(), key=lambda x: x[1]))
+                for key, value in sorted_mapping.items():
+                    file.write(f'{key}\n')
+            nodes_set = pd.read_csv(node_path, names=['node'])
         self.full_node_list = nodes_set['node'].tolist()
         self.node_num = len(self.full_node_list)
 

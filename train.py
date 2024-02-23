@@ -9,10 +9,12 @@ from metrics import NegativeSamplingLoss, ReconstructionLoss, VAELoss, VAEClassi
 from metrics import ClassificationLoss, StructureClassificationLoss
 from models import MLPClassifier, EdgeClassifier, InnerProduct
 from utils import get_supported_gnn_methods, get_core_based_methods
+from utils import split_label_list, mean_n_std
+import evaluation.community_detection as cd
 
 
 def get_data_loader(args):
-    base_path = args['base_path']
+    base_path = '.' + args['base_path']
     origin_folder = args['origin_folder']
     core_folder = args.get('core_folder', None)
     nfeature_folder = args.get('nfeature_folder', None)
@@ -166,7 +168,7 @@ def get_gnn_model(method, time_length, args):
 def get_loss(method, idx, time_length, data_loader, args):
     learning_type = args['learning_type']
     assert learning_type in ['U-neg', 'U-own', 'S-node', 'S-edge', 'S-link-st', 'S-link-dy']
-    base_path = args['base_path']
+    base_path = '.' + args['base_path']
     file_sep = args['file_sep']
 
     if learning_type == 'U-neg':
@@ -223,10 +225,15 @@ def get_loss(method, idx, time_length, data_loader, args):
 
 def gnn_embedding(method, args):
     # common params
-    base_path = args['base_path']
+    base_path = '.' + args['base_path']
     origin_folder = args['origin_folder']
+    label_folder = args['label_folder']
     embedding_folder = args['embed_folder']
     model_folder = args['model_folder']
+    community_folder = args['community_folder']
+    score_folder = args['score_folder']
+    train_folder = args['train_folder']
+    test_folder = args['test_folder']
     model_file = args['model_file']
     node_file = args['node_file']
     # file_sep = args['file_sep']
@@ -240,6 +247,7 @@ def gnn_embedding(method, args):
     epoch = args['epoch']
     lr = args['lr']
     batch_size = args['batch_size']
+    gamma = args['gamma']  # semi-supervised learning loss weight
     load_model = args['load_model']
     shuffle = args['shuffle']
     export = args['export']
@@ -249,6 +257,24 @@ def gnn_embedding(method, args):
     data_loader = get_data_loader(args)
     max_time_num = data_loader.max_time_num
     node_list = data_loader.full_node_list
+
+    label_base_path = os.path.abspath(os.path.join(base_path, label_folder))
+    community_base_path = os.path.abspath(os.path.join(base_path, community_folder))
+    score_base_path = os.path.abspath(os.path.join(base_path, score_folder))
+    train_path = os.path.abspath(os.path.join(base_path, train_folder) + f'/train_ratio_{args["train_ratio"]}')
+    test_path = os.path.abspath(os.path.join(base_path, test_folder) + f'/train_ratio_{args["train_ratio"]}')
+    # If community_base_path doesn't exist, create it
+    if not os.path.exists(community_base_path):
+        os.makedirs(community_base_path)
+    # Same with score_base_path
+    if not os.path.exists(score_base_path):
+        os.makedirs(score_base_path)
+    # Same with train_path
+    if not os.path.exists(train_path):
+        os.makedirs(train_path)
+    # Same with test_path
+    if not os.path.exists(test_path):
+        os.makedirs(test_path)
 
     if start_idx < 0:
         start_idx = max_time_num + start_idx
@@ -274,10 +300,12 @@ def gnn_embedding(method, args):
         model = get_gnn_model(method, time_length, args)
 
         if learning_type in ['U-neg', 'U-own']:
+            label_list, active_nodes_list = data_loader.get_date_label_list(label_base_path, start_idx=idx, duration=time_length, sep=args['file_sep'])
+            train_labels, test_labels = split_label_list(label_list, active_nodes_list, train_path, test_path, data_loader, args, idx)
             loss = get_loss(method, idx, time_length, data_loader, args)
             trainer = UnsupervisedEmbedding(base_path=base_path, origin_folder=origin_folder, embedding_folder=embedding_folder, node_list=node_list,
                                             model=model, loss=loss, model_folder=model_folder, has_cuda=has_cuda)
-            cost_time = trainer.learn_embedding(adj_list, x_list, edge_list, node_dist_list, epoch=epoch, batch_size=batch_size, lr=lr, start_idx=idx, weight_decay=weight_decay,
+            cost_time = trainer.learn_embedding(adj_list, x_list, edge_list, node_dist_list, time_length, train_labels, gamma, epoch=epoch, batch_size=batch_size, lr=lr, start_idx=idx, weight_decay=weight_decay,
                                                 model_file=model_file, load_model=load_model, shuffle=shuffle, export=export)
             time_list.append(cost_time)
 
@@ -289,10 +317,24 @@ def gnn_embedding(method, args):
             loss, classifier, node_labels, edge_labels = get_loss(method, idx, time_length, data_loader, args)
             trainer = SupervisedEmbedding(base_path=base_path, origin_folder=origin_folder, embedding_folder=embedding_folder, node_list=node_list, model=model,
                                           loss=loss, classifier=classifier, model_folder=model_folder, has_cuda=has_cuda)
-            cost_time = trainer.learn_embedding(adj_list, x_list, node_labels, edge_labels, edge_list, node_dist_list, learning_type=learning_type, epoch=epoch, batch_size=batch_size,
+            cost_time = trainer.learn_embedding(adj_list, x_list, node_labels, edge_labels, edge_list, node_dist_list, time_length, learning_type=learning_type, epoch=epoch, batch_size=batch_size,
                                                 lr=lr, start_idx=idx, weight_decay=weight_decay, train_ratio=train_ratio, val_ratio=val_ratio, test_ratio=test_ratio,
                                                 model_file=model_file, classifier_file=cls_file, load_model=load_model, shuffle=shuffle, export=export)
             time_list.append(cost_time)
+
+        # COMMUNITY DETECTION
+        embs = []
+        nodes_set = pd.read_csv(os.path.join(base_path, node_file), names=['node'])
+        for i in range(idx, min(idx+duration, max_time_num)):
+            emb = pd.read_csv(os.path.join(base_path, embedding_folder, f'graph{i}.csv'), sep='\t', index_col=0)
+            embs.append(emb)
+        for i in range(len(embs)):
+            emb = embs[i]
+            active_nodes = active_nodes_list[i]
+            active_filter = nodes_set.loc[active_nodes, 'node'].tolist()
+            emb = emb.reindex(index=active_filter)
+            emb_dim = emb.shape[1]
+            cd.evaluate_community_detection(train_labels[i], test_labels[i], emb, active_nodes, community_base_path, score_base_path, idx+i, emb_dim, data_loader)
 
     # record time cost of the model
     if record_time:
@@ -300,3 +342,5 @@ def gnn_embedding(method, args):
         df_output.to_csv(os.path.join(base_path, method + '_time.csv'), sep=',', index=False)
     t2 = time.time()
     print('finish ' + method + ' embedding! cost time: ', t2 - t1, ' seconds!')
+    # Print mean and std scores
+    mean_n_std(score_base_path + '/score.txt')

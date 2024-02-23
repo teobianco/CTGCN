@@ -6,11 +6,13 @@ from evaluation.metrics import *
 from sklearn.manifold import TSNE
 
 
-def evaluate_community_detection(dict_communities, embeddings, active_nodes, path_save_communities, path_save_scores, time_step, emb_dim):
+def evaluate_community_detection(dict_train_communities, dict_communities, embeddings, active_nodes, path_save_communities, path_save_scores, time_step, emb_dim, data_loader):
     """Evaluate community detection using DBSCAN"""
     # Consider just active nodes
     # embeddings = embeddings[active_nodes]
     print('Embeddings shape of active nodes is: ', embeddings.shape)
+    # Eliminate from dict_communities nodes that have value -1
+    dict_communities = {key: value for key, value in dict_communities.items() if value != -1}
     # Create true_labels as a 1-D array
     true_labels = np.array(list(dict_communities.values()))
     # Create true_communities as a list of lists
@@ -31,22 +33,38 @@ def evaluate_community_detection(dict_communities, embeddings, active_nodes, pat
     # plot_embeddings(embeddings, true_labels)
     # Detect communities with DBSCAN
     pred_labels = get_clusters(embeddings, emb_dim)
-    print('Predicted labels are: ', pred_labels)
-    # Create pred_communities as a list of lists
+    # print('Predicted labels are: ', pred_labels)
+    # Create pred_communities as a list of lists excluding labels with value -1
     pred_communities = []
     for i in range(max(pred_labels) + 1):
         pred_communities.append([active_nodes[j] for j in range(len(pred_labels)) if pred_labels[j] == i])
     # Some prints
-    print('True communities are ', true_communities)
-    print('Predicted communities are ', pred_communities)
+    # print('True communities are ', true_communities)
+    # print('Predicted communities are ', pred_communities)
+    # Before evaluating results we erase from pred_communities nodes used in training
+    # So first we delete from dict_train_communities the nodes that have value -1
+    dict_train_communities = {key: value for key, value in dict_train_communities.items() if value != -1}
+    # Then we delete from pred_communities the nodes that are in dict_train_communities
+    for key, value in dict_train_communities.items():
+        for i in range(len(pred_communities)):
+            if key in pred_communities[i]:
+                pred_communities[i].remove(key)
+    # Check if there are empy lists in pred_communities
+    pred_communities = [x for x in pred_communities if x]
+    # print('Predicted communities after pruning training nodes are ', pred_communities)
+    # Define pred_labels_score after pruning training nodes from pred_labels
+    pred_labels_score = np.array(list(dict_communities.values()))
     # Evaluate the results
-    avgf1, avgjaccard, nmi = eval_scores(pred_communities, true_communities, pred_labels, true_labels, tmp_print=True)
+    avgf1, avgjaccard, nmi = eval_scores(pred_communities, true_communities, pred_labels_score, true_labels, tmp_print=True)
     # Save the results
-    with open(path_save_scores + '/score.txt', 'a') as f:
+    idx2node = {value: key for key, value in data_loader.node2idx_dict.items()}
+    nodes = [idx2node[i] for i in active_nodes]
+    modality = 'w' if time_step == 0 else 'a'
+    with open(path_save_scores + '/score.txt', modality) as f:
         f.write("Time {time}: F1 Score: {avgf1} , Jaccard Score: {avgjaccard} , NMI: {nmi}\n".format(time=time_step, avgf1=avgf1, avgjaccard=avgjaccard, nmi=nmi))
     with open(path_save_communities + '/pred_commun_timestep{time}.txt'.format(time=time_step), 'w') as f:
         for i in range(len(pred_labels)):
-            f.write("{node} {label}\n".format(node=active_nodes[i], label=pred_labels[i]))
+            f.write("{node} {label}\n".format(node=nodes[i], label=pred_labels[i]))
 
 
 def get_clusters(embeddings, emb_dim):

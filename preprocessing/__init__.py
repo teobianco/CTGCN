@@ -8,9 +8,9 @@ from preprocessing.walk_generation import WalkGenerator
 class Processing:
     walk_generator: WalkGenerator
 
-    def __init__(self, base_path, origin_folder, core_folder, walk_pair_folder, node_freq_folder, node_file, walk_time=100, walk_length=5):
+    def __init__(self, base_path, origin_folder, label_folder, core_folder, walk_pair_folder, node_freq_folder, node_file, walk_time=100, walk_length=5):
         if core_folder is not None:
-            self.structure_generator = StructureInfoGenerator(base_path, origin_folder, core_folder, node_file)
+            self.structure_generator = StructureInfoGenerator(base_path, origin_folder, core_folder, label_folder, node_file)
         else:
             self.structure_generator = None
         self.walk_generator = WalkGenerator(base_path, origin_folder, walk_pair_folder, node_freq_folder, node_file, walk_time=walk_time, walk_length=walk_length)
@@ -32,8 +32,9 @@ class Processing:
 
 # preprocessing for all supported GNN methods
 def preprocess(method, args):
-    base_path = args['base_path']
+    base_path = '.' + args['base_path']
     origin_folder = args['origin_folder']
+    label_folder = args['label_folder']
     core_folder = args.get('core_folder', None)
     node_file = args['node_file']
     walk_pair_folder = args['walk_pair_folder']
@@ -47,7 +48,7 @@ def preprocess(method, args):
     worker = args['worker']
 
     t1 = time.time()
-    processing = Processing(base_path=base_path, origin_folder=origin_folder, core_folder=core_folder, walk_pair_folder=walk_pair_folder, node_freq_folder=node_freq_folder,
+    processing = Processing(base_path=base_path, origin_folder=origin_folder, label_folder=label_folder, core_folder=core_folder, walk_pair_folder=walk_pair_folder, node_freq_folder=node_freq_folder,
                             node_file=node_file, walk_time=walk_time, walk_length=walk_length)
     processing.run(worker=worker, generate_core=generate_core, run_walk=run_walk, sep=file_sep, weighted=weighted)
     t2 = time.time()

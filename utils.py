@@ -21,7 +21,7 @@ def check_and_make_path(to_make):
 
 # Get networkx graph object from file path. If the graph is unweighted, then add the 'weight' attribute
 def get_nx_graph(file_path, full_node_list, sep='\t'):
-    df = pd.read_csv(file_path, sep=sep)
+    df = pd.read_csv(file_path, index_col=False, names=['from_id', 'to_id'], header=0, sep='\s+')
     if df.shape[1] == 2:
         df['weight'] = 1.0
     graph = nx.from_pandas_edgelist(df, "from_id", "to_id", edge_attr='weight', create_using=nx.Graph)
@@ -39,8 +39,8 @@ def get_sp_adj_mat(file_path, full_node_list, sep='\t'):
     with open(file_path, 'r') as fp:
         content_list = fp.readlines()
         # ignore header
-        for line in content_list[1:]:
-            line_list = line.split(sep)
+        for line in content_list:
+            line_list = list(map(int, line.split()))
             col_num = len(line_list)
             assert col_num in [2, 3]
             if col_num == 2:
@@ -180,3 +180,113 @@ def get_supported_methods():
     method_list = ['DynGEM', 'DynAE', 'DynRNN', 'DynAERNN', 'TIMERS', 'GCN', 'TgGCN', 'GAT', 'TgGAT', 'SAGE', 'TgSAGE', 'GIN', 'TgGIN', 'PGNN',
                    'CGCN-C', 'CGCN-S', 'GCRN', 'EvolveGCN', 'VGRNN', 'CTGCN-C', 'CTGCN-S']
     return dict(zip(method_list, np.ones(len(method_list), dtype=np.int)))
+
+
+def split_label_list(labels_list, active_nodes_list, train_path, test_path, data_loader, args, idx):
+    train_list = []
+    test_list = []
+    if args['already_train_test']:
+        print("Load train_list and test_list from file")
+        for time in range(len(labels_list)):
+            # Load train_list and test_list from file
+            num_nodes = len(data_loader.full_node_list)
+            train_dict = dict()
+            test_dict = dict()
+            for i in range(num_nodes):
+                train_dict[i] = -1
+                test_dict[i] = -1
+            with open(train_path + '/train_set_timestep{time}.txt'.format(time=idx+time), 'r') as f:
+                for line in f:
+                    node, label = map(int, line.split())
+                    train_dict[data_loader.node2idx_dict[node]] = label
+            with open(test_path + '/test_set_timestep{time}.txt'.format(time=idx+time), 'r') as f:
+                for line in f:
+                    node, label = map(int, line.split())
+                    test_dict[data_loader.node2idx_dict[node]] = label
+            train_list.append(train_dict)
+            test_list.append(test_dict)
+    else:
+        train_ratio = args['train_ratio']
+        idx2node_dict = {value: key for key, value in data_loader.node2idx_dict.items()}
+        for time in range(len(labels_list)):
+            label_dict = labels_list[time]
+            train_dict = dict()
+            test_dict = dict()
+            values_set = set(label_dict.values())
+            values_set.discard(-1)
+            values = list(values_set)
+            np.random.shuffle(values)
+            train_num = int(len(values) * train_ratio)
+            train_values = values[:train_num]
+            for node in label_dict:
+                if label_dict[node] in train_values:
+                    train_dict[node] = label_dict[node]
+                    test_dict[node] = -1
+                else:
+                    train_dict[node] = -1
+                    test_dict[node] = label_dict[node]
+            train_list.append(train_dict)
+            test_list.append(test_dict)
+            # Filter active nodes in train_dict and test_dict
+            save_train = {key: value for key, value in train_dict.items() if (key in active_nodes_list[time] and value != -1)}
+            save_test = {key: value for key, value in test_dict.items() if (key in active_nodes_list[time] and value != -1)}
+            # Save save_train and save_test to file
+            with open(train_path + '/train_set_timestep{time}.txt'.format(time=idx+time), 'w') as f:
+                for key, value in save_train.items():
+                    f.write("{key} {value}\n".format(key=idx2node_dict[key], value=value))
+            with open(test_path + '/test_set_timestep{time}.txt'.format(time=idx+time), 'w') as f:
+                for key, value in save_test.items():
+                    f.write("{key} {value}\n".format(key=idx2node_dict[key], value=value))
+    return train_list, test_list
+
+def split_train_test_new(self, label_dict, frac_train, active_nodes, data_loader, time, train_path='train_set', test_path='test_set'):
+    idx2node_dict = {value: key for key, value in data_loader.node2idx_dict.items()}
+    train_dict = dict()
+    test_dict = dict()
+    values_set = set(label_dict.values())
+    values_set.discard(-1)
+    values = list(values_set)
+    np.random.shuffle(values)
+    train_num = int(len(values) * frac_train)
+    train_values = values[:train_num]
+    for node in label_dict:
+        if label_dict[node] in train_values:
+            train_dict[node] = label_dict[node]
+            test_dict[node] = -1
+        else:
+            train_dict[node] = -1
+            test_dict[node] = label_dict[node]
+    # Filter active nodes in train_dict and test_dict
+    save_train = {key: value for key, value in train_dict.items() if
+                  (key in active_nodes and value != -1)}
+    save_test = {key: value for key, value in test_dict.items() if
+                 (key in active_nodes and value != -1)}
+    # Save save_train and save_test to file
+    with open(train_path + '/train_set_timestep{time}.txt'.format(time=time), 'w') as f:
+        for key, value in save_train.items():
+            f.write("{key} {value}\n".format(key=idx2node_dict[key], value=value))
+    with open(test_path + '/test_set_timestep{time}.txt'.format(time=time), 'w') as f:
+        for key, value in save_test.items():
+            f.write("{key} {value}\n".format(key=idx2node_dict[key], value=value))
+    return train_dict, test_dict
+
+
+def mean_n_std(path):
+    score_file_path = path
+    with open(score_file_path, 'r') as file:
+        f1 = []
+        jaccard = []
+        nmi = []
+        for line in file:
+            # read after the second :
+            splits = line.split(': ')
+            f1.append(float(splits[2].split()[0]))
+            jaccard.append(float(splits[3].split()[0]))
+            nmi.append(float(splits[4].split()[0]))
+    # Calculate mean and std
+    print('F1 mean: ', np.mean(f1))
+    print('F1 std: ', np.std(f1))
+    print('Jaccard mean: ', np.mean(jaccard))
+    print('Jaccard std: ', np.std(jaccard))
+    print('NMI mean: ', np.mean(nmi))
+    print('NMI std: ', np.std(nmi))

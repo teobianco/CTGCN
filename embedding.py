@@ -7,6 +7,7 @@ import time
 import torch
 from models import MLPClassifier
 from utils import check_and_make_path, get_neg_edge_samples
+from metrics import SemiSupervisedLoss
 
 
 # The base class of embedding
@@ -29,7 +30,7 @@ class BaseEmbedding:
         self.embedding_base_path = os.path.abspath(os.path.join(base_path, embedding_folder))
         self.model_base_path = os.path.abspath(os.path.join(base_path, model_folder))
         self.has_cuda = has_cuda
-        self.device = torch.device('cuda: 0') if has_cuda else torch.device('cpu')
+        self.device = torch.device('cuda', 0) if has_cuda else torch.device('cpu')
         self.model = model
         self.loss = loss
 
@@ -327,9 +328,11 @@ class UnsupervisedEmbedding(BaseEmbedding):
         return batch_num
 
     # edge_list parameter is only used by VGRNN, node_dist_list parameter is only used by PGNN
-    def learn_embedding(self, adj_list, x_list, edge_list=None, node_dist_list=None, epoch=50, batch_size=1024, lr=1e-3, start_idx=0, weight_decay=0., model_file='ctgcn', load_model=False, shuffle=True, export=True):
+    def learn_embedding(self, adj_list, x_list, edge_list=None, node_dist_list=None, time_length=1, labels=None, gamma=1, epoch=50, batch_size=1024, lr=1e-3, start_idx=0, weight_decay=0., model_file='ctgcn', load_model=False, shuffle=True, export=True):
         print('start learning embedding!')
         model, loss_model, optimizer, _ = self.prepare(load_model, model_file, lr=lr, weight_decay=weight_decay)
+        semi_supervised_loss = SemiSupervisedLoss(time_length, model)  #Capire se aggiungere qualcosa all'init
+        semi_supervised_loss.to(self.device)
         batch_num = self.get_batch_info(batch_size)
         all_nodes = torch.arange(self.node_num, device=self.device)
         output_list = []
@@ -344,7 +347,11 @@ class UnsupervisedEmbedding(BaseEmbedding):
                 batch_indices = node_indices[j * batch_size: min(self.node_num, (j + 1) * batch_size)]
                 t1 = time.time()
                 loss_input_list, output_list, hx = self.get_model_res(adj_list, x_list, edge_list, node_dist_list, model, batch_indices, hx)
-                loss = loss_model(loss_input_list)
+                # loss = loss_model(loss_input_list) + gamma*semi_supervised_loss(loss_input_list, labels)
+                loss_1 = loss_model(loss_input_list)
+                loss_2 = semi_supervised_loss(loss_input_list, labels)
+                loss = loss_1 + gamma*loss_2
+                # print('Added semi-supervision to loss')
                 loss.backward()
                 # gradient accumulation
                 if j == batch_num - 1:
@@ -353,6 +360,7 @@ class UnsupervisedEmbedding(BaseEmbedding):
                 t2 = time.time()
                 self.clear_cache()
                 print('epoch', i + 1, ', batch num = ', j + 1, ', loss:', loss.item(), ', cost time: ', t2 - t1, ' seconds!')
+                print('CTGCN loss: ', loss_1.item(), ' , Label loss: ', loss_2.item())
         print('end unsupervised training!')
         en = time.time()
         cost_time = en - st

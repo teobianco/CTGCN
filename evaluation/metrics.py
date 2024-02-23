@@ -43,8 +43,8 @@ def eval_scores(pred_comms, true_comms, pred_labels, true_labels, tmp_print=Fals
     percent = len(list(comm_nodes & pred_nodes)) / len(comm_nodes)
 
     # NMI
-    # nmi_score = get_nmi_score(pred_comms, true_comms)
-    nmi_score = NMI(pred_labels, true_labels)
+    nmi_score = get_nmi_score(pred_comms, true_comms)
+    # nmi_score = NMI(pred_labels, true_labels)
 
     if tmp_print:
         print("AvgF1: {mean_score_all2} AvgJaccard: {mean_score_all3} NMI: {nmi_score} ".format(mean_score_all2=mean_score_all[2], mean_score_all3=mean_score_all[3], nmi_score=nmi_score) +
