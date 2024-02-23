@@ -530,7 +530,7 @@
     },
     "DynGEM":
     {
-      "base_path": "/data/email-Eu-core_setting1_dancerweak",
+      "base_path": "/data/Amazon_setting2",
       "origin_folder": "1.format",
       "label_folder": "3.label",
       "embed_folder": "2.embedding/DynGEM",
@@ -563,7 +563,7 @@
       "nu1": 1e-4,
       "nu2": 1e-4,
       "bias": true,
-      "already_train_test": false
+      "already_train_test": true
     },
     "DynAE":
     {
@@ -665,7 +665,7 @@
     },
     "CTGCN-C":
     {
-      "base_path": "/data/email-Eu-core_setting1_dancerweak",
+      "base_path": "/data/Amazon_setting2",
       "origin_folder": "1.format",
       "core_folder": "CTGCN/ctgcn_cores",
       "label_folder": "3.label",
@@ -709,11 +709,11 @@
       "train_ratio": 0.5,
       "val_ratio": 0.3,
       "test_ratio": 0.2,
-      "already_train_test": false
+      "already_train_test": true
     },
     "CTGCN-S":
     {
-      "base_path": "/data/email-Eu-core_setting1_dancerweak",
+      "base_path": "/data/Amazon_setting2",
       "origin_folder": "1.format",
       "core_folder": "CTGCN/ctgcn_cores",
       "label_folder": "3.label",
@@ -868,7 +868,7 @@
     },
     "CTGCN-C":
     {
-      "base_path": "/data/email-Eu-core_setting1_dancerweak",
+      "base_path": "/data/Amazon_setting2",
       "origin_folder": "1.format",
       "label_folder": "3.label",
       "core_folder": "CTGCN/ctgcn_cores",
