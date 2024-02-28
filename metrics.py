@@ -130,7 +130,7 @@ class SemiSupervisedLoss(nn.Module):
         self.time_length = time_length
         self.model = model
 
-    def forward(self, input_list, labels):
+    def forward(self, input_list, all_batch_labels):
         if self.model.method_name == 'CTGCN-S':
             assert len(input_list) == 3
             embeddings, batch_indices = input_list[0], input_list[2]
@@ -140,9 +140,10 @@ class SemiSupervisedLoss(nn.Module):
         loss = 0
         for i in range(self.time_length):
             # batch_labels = labels[i][batch_indices]
-            batch_labels = torch.tensor([labels[i].get(key.item()) for key in batch_indices], dtype=torch.int32)
+            # batch_labels = torch.tensor([labels[i].get(key.item()) for key in batch_indices], dtype=torch.int32)
             # print('tensor: ', batch_indices)
             # print('list: ', batch_labels)
+            batch_labels = all_batch_labels[i]
             embedding = embeddings[i][batch_indices]
             loss += self.__embeddings_diff_loss(embedding, batch_labels)
         return loss

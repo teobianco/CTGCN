@@ -30,7 +30,9 @@ class BaseEmbedding:
         self.embedding_base_path = os.path.abspath(os.path.join(base_path, embedding_folder))
         self.model_base_path = os.path.abspath(os.path.join(base_path, model_folder))
         self.has_cuda = has_cuda
+        print('In BaseEmbedding init, has_cuda is: ', has_cuda)
         self.device = torch.device('cuda', 0) if has_cuda else torch.device('cpu')
+        print('In BaseEmbedding init, device is: ', self.device)
         self.model = model
         self.loss = loss
 
@@ -349,7 +351,10 @@ class UnsupervisedEmbedding(BaseEmbedding):
                 loss_input_list, output_list, hx = self.get_model_res(adj_list, x_list, edge_list, node_dist_list, model, batch_indices, hx)
                 # loss = loss_model(loss_input_list) + gamma*semi_supervised_loss(loss_input_list, labels)
                 loss_1 = loss_model(loss_input_list)
-                loss_2 = semi_supervised_loss(loss_input_list, labels)
+                all_batch_labels = []
+                for t in range(time_length):
+                    all_batch_labels.append(torch.tensor([labels[t].get(key.item()) for key in batch_indices], dtype=torch.int32).to(self.device))
+                loss_2 = semi_supervised_loss(loss_input_list, all_batch_labels)
                 loss = loss_1 + gamma*loss_2
                 # print('Added semi-supervision to loss')
                 loss.backward()

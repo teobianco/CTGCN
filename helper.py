@@ -23,6 +23,7 @@ class DataLoader:
         self.node_num = len(self.full_node_list)
         self.node2idx_dict = dict(zip(self.full_node_list, np.arange(self.node_num)))
         self.has_cuda = has_cuda
+        print('In DataLoader init has_cuda is: ', self.has_cuda)
 
     # get adjacent matrices for a graph list, this function supports Tensor type-based adj and sparse.coo type-based adj.
     def get_date_adj_list(self, origin_base_path, start_idx, duration, sep='\t', normalize=False, row_norm=False, add_eye=False, data_type='tensor'):
