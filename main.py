@@ -5,10 +5,11 @@ import json
 import torch
 import argparse
 import numpy as np
-from utils import get_supported_methods
+from utils import get_supported_methods, assign_free_gpus
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1, 2, 3'
-
+# os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1, 2, 3'
+# This function assigns free GPUs to the program
+assign_free_gpus(threshold_vram_usage=1, max_gpus=4)
 
 # Parse parameters from the input
 def parse_args(args):

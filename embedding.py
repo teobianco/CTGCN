@@ -337,6 +337,9 @@ class UnsupervisedEmbedding(BaseEmbedding):
         semi_supervised_loss.to(self.device)
         batch_num = self.get_batch_info(batch_size)
         all_nodes = torch.arange(self.node_num, device=self.device)
+        # Sposto labels sulla GPU
+        for i in range(time_length):
+            labels[i] = {key: torch.tensor(value).to(self.device) for key, value in labels[i].items()}
         output_list = []
 
         st = time.time()
@@ -353,7 +356,7 @@ class UnsupervisedEmbedding(BaseEmbedding):
                 loss_1 = loss_model(loss_input_list)
                 all_batch_labels = []
                 for t in range(time_length):
-                    all_batch_labels.append(torch.tensor([labels[t].get(key.item()) for key in batch_indices], dtype=torch.int32).to(self.device))
+                    all_batch_labels.append(torch.tensor([labels[t].get(key.item()) for key in batch_indices]).to(self.device))
                 loss_2 = semi_supervised_loss(loss_input_list, all_batch_labels)
                 loss = loss_1 + gamma*loss_2
                 # print('Added semi-supervision to loss')
