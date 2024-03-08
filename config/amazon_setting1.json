@@ -709,7 +709,7 @@
       "train_ratio": 0.5,
       "val_ratio": 0.3,
       "test_ratio": 0.2,
-      "already_train_test": false
+      "already_train_test": true
     },
     "CTGCN-S":
     {
