@@ -6,10 +6,10 @@ import torch
 import argparse
 import numpy as np
 from utils import get_supported_methods, assign_free_gpus
+import faulthandler
+faulthandler.enable()
 
-# os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1, 2, 3'
-# This function assigns free GPUs to the program
-assign_free_gpus(threshold_vram_usage=1, max_gpus=4)
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "caching_allocator"
 
 # Parse parameters from the input
 def parse_args(args):
@@ -102,6 +102,11 @@ def main(argv):
     args = parse_args(argv[1:])
     print('args:', args)
     config_dict = parse_json_args(args.config[0])
+    # Set the environment variable to use the specified GPU
+    # os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1, 2, 3'
+    # This function assigns free GPUs to the program
+    if config_dict[args.task][args.method]['use_cuda']:
+        assign_free_gpus(max_gpus=4)
     # pass configuration parameters used in different tasks
     if args.task == 'preprocessing':
         args_dict = config_dict[args.task]

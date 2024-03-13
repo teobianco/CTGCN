@@ -14,7 +14,8 @@ import evaluation.community_detection as cd
 
 
 def get_data_loader(args):
-    base_path = '.' + args['base_path']
+    base_path = args['base_path']
+    base_path = base_path[1:]
     origin_folder = args['origin_folder']
     core_folder = args.get('core_folder', None)
     nfeature_folder = args.get('nfeature_folder', None)
@@ -92,14 +93,14 @@ def get_input_data(method, idx, time_length, data_loader, args):
 def get_gnn_model(method, time_length, args):
     assert method in get_supported_gnn_methods()
 
-    from baseline.gcn import GCN, TgGCN
-    from baseline.gat import GAT, TgGAT
-    from baseline.sage import SAGE, TgSAGE
-    from baseline.gin import GIN, TgGIN
-    from baseline.pgnn import PGNN
-    from baseline.gcrn import GCRN
-    from baseline.egcn import EvolveGCN
-    from baseline.vgrnn import VGRNN
+    #from baseline.gcn import GCN, TgGCN
+    #from baseline.gat import GAT, TgGAT
+    #from baseline.sage import SAGE, TgSAGE
+    #from baseline.gin import GIN, TgGIN
+    #from baseline.pgnn import PGNN
+    #from baseline.gcrn import GCRN
+    #from baseline.egcn import EvolveGCN
+    #from baseline.vgrnn import VGRNN
     from models import CGCN, CTGCN
 
     input_dim = args['input_dim']
@@ -225,7 +226,8 @@ def get_loss(method, idx, time_length, data_loader, args):
 
 def gnn_embedding(method, args):
     # common params
-    base_path = '.' + args['base_path']
+    base_path = args['base_path']
+    base_path = base_path[1:]
     origin_folder = args['origin_folder']
     label_folder = args['label_folder']
     embedding_folder = args['embed_folder']
