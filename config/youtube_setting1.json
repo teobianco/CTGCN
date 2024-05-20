@@ -548,9 +548,9 @@
       "embed_dim": 16,
       "use_cuda": true,
       "thread_num": 30,
-      "epoch": 35,
+      "epoch": 50,
       "lr": 1e-3,
-      "batch_size": 2048,
+      "batch_size": 13000,
       "train_ratio": 0.5,
       "load_model": true,
       "shuffle": true,
@@ -686,7 +686,7 @@
       "thread_num": 30,
       "epoch": 50,
       "lr": 1e-3,
-      "batch_size": 100,
+      "batch_size": 3000,
       "gamma": 100,
       "load_model": false,
       "shuffle": true,
@@ -709,7 +709,7 @@
       "train_ratio": 0.5,
       "val_ratio": 0.3,
       "test_ratio": 0.2,
-      "already_train_test": false
+      "already_train_test": true
     },
     "CTGCN-S":
     {
@@ -732,9 +732,9 @@
       "embed_dim": 16,
       "use_cuda": true,
       "thread_num": 30,
-      "epoch": 35,
+      "epoch": 50,
       "lr": 1e-3,
-      "batch_size": 100,
+      "batch_size": 3000,
       "gamma": 1,
       "load_model": false,
       "shuffle": true,
@@ -755,7 +755,7 @@
       "train_ratio": 0.5,
       "val_ratio": 0.3,
       "test_ratio": 0.2,
-      "already_train_test": false
+      "already_train_test": true
     }
   },
   "preprocessing":
