@@ -1,4 +1,5 @@
 # coding: utf-8
+
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
@@ -7,6 +8,8 @@ import os
 import torch
 import subprocess
 import time
+
+# Function assign_free_gpus() is taken from https://gist.github.com/afspies/7e211b83ca5a8902849b05ded9a10696
 
 
 def sigmoid(x):
@@ -185,6 +188,9 @@ def get_supported_methods():
 
 
 def split_label_list(labels_list, active_nodes_list, train_path, test_path, data_loader, args, idx):
+    """
+    Split labels_list into train_list and test_list if already_train_test is False, otherwise load train_list and test_list from file
+    """
     train_list = []
     test_list = []
     if args['already_train_test']:
@@ -241,39 +247,11 @@ def split_label_list(labels_list, active_nodes_list, train_path, test_path, data
                     f.write("{key} {value}\n".format(key=idx2node_dict[key], value=value))
     return train_list, test_list
 
-def split_train_test_new(self, label_dict, frac_train, active_nodes, data_loader, time, train_path='train_set', test_path='test_set'):
-    idx2node_dict = {value: key for key, value in data_loader.node2idx_dict.items()}
-    train_dict = dict()
-    test_dict = dict()
-    values_set = set(label_dict.values())
-    values_set.discard(-1)
-    values = list(values_set)
-    np.random.shuffle(values)
-    train_num = int(len(values) * frac_train)
-    train_values = values[:train_num]
-    for node in label_dict:
-        if label_dict[node] in train_values:
-            train_dict[node] = label_dict[node]
-            test_dict[node] = -1
-        else:
-            train_dict[node] = -1
-            test_dict[node] = label_dict[node]
-    # Filter active nodes in train_dict and test_dict
-    save_train = {key: value for key, value in train_dict.items() if
-                  (key in active_nodes and value != -1)}
-    save_test = {key: value for key, value in test_dict.items() if
-                 (key in active_nodes and value != -1)}
-    # Save save_train and save_test to file
-    with open(train_path + '/train_set_timestep{time}.txt'.format(time=time), 'w') as f:
-        for key, value in save_train.items():
-            f.write("{key} {value}\n".format(key=idx2node_dict[key], value=value))
-    with open(test_path + '/test_set_timestep{time}.txt'.format(time=time), 'w') as f:
-        for key, value in save_test.items():
-            f.write("{key} {value}\n".format(key=idx2node_dict[key], value=value))
-    return train_dict, test_dict
-
 
 def mean_n_std(path):
+    """
+    Calculate mean and std of F1, Jaccard and NMI scores from a file
+    """
     score_file_path = path
     with open(score_file_path, 'r') as file:
         f1 = []
@@ -292,6 +270,7 @@ def mean_n_std(path):
     print('Jaccard std: ', np.std(jaccard))
     print('NMI mean: ', np.mean(nmi))
     print('NMI std: ', np.std(nmi))
+
 
 def assign_free_gpus(threshold_vram_usage=1500, max_gpus=2, wait=False, sleep_time=10):
     """

@@ -123,6 +123,7 @@ class ReconstructionLoss(nn.Module):
         return structure_loss
 
 
+# Semi-supervised loss used for k-core based dynamic methods(CTGCN-C and CTGCN-S)
 class SemiSupervisedLoss(nn.Module):
 
     def __init__(self, time_length, model):
@@ -139,35 +140,18 @@ class SemiSupervisedLoss(nn.Module):
             embeddings, batch_indices = input_list[0], input_list[1]
         loss = 0
         for i in range(self.time_length):
-            # batch_labels = labels[i][batch_indices]
-            # batch_labels = torch.tensor([labels[i].get(key.item()) for key in batch_indices], dtype=torch.int32)
-            # print('tensor: ', batch_indices)
-            # print('list: ', batch_labels)
             batch_labels = all_batch_labels[i]
             embedding = embeddings[i][batch_indices]
             loss += self.__embeddings_diff_loss(embedding, batch_labels)
         return loss
 
-    # @staticmethod
-    # def __embeddings_diff_loss(embedding, batch_labels):
-    #     grouped_hx_i = []
-    #     for label in torch.unique(batch_labels):
-    #         if label != -1:
-    #             mask = batch_labels == label  # Maschera booleana per selezionare i nodi con la label corrente
-    #             grouped_hx_i.append(embedding[mask])
-    #     grouped_hx_i = torch.cat(grouped_hx_i, dim=0)
-    #     diff = grouped_hx_i.unsqueeze(0) - grouped_hx_i.unsqueeze(1)
-    #     label_loss = torch.sum(diff ** 2) / diff.numel()
-    #     return label_loss
-
     @staticmethod
     def __embeddings_diff_loss(embedding, batch_labels):
-        # grouped_hx_i = []
         label_loss = 0
         num = 0  # Number of different labels with more than one node in the batch. I use it to calculate the average of the label loss
         for label in torch.unique(batch_labels):
             if label != -1:
-                mask = batch_labels == label  # Maschera booleana per selezionare i nodi con la label corrente
+                mask = batch_labels == label  # Boolean mask for the nodes with the current label
                 group = embedding[mask]
                 if group.shape[0] != 1:
                     num += 1

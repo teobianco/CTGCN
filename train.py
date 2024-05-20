@@ -260,6 +260,7 @@ def gnn_embedding(method, args):
     max_time_num = data_loader.max_time_num
     node_list = data_loader.full_node_list
 
+    # Define the folders
     label_base_path = os.path.abspath(os.path.join(base_path, label_folder))
     community_base_path = os.path.abspath(os.path.join(base_path, community_folder))
     score_base_path = os.path.abspath(os.path.join(base_path, score_folder))

@@ -35,14 +35,11 @@ class DataLoader:
             original_graph_path = os.path.join(origin_base_path, date_dir_list[i])
             with open(original_graph_path, 'r') as file:
                 G = nx.Graph()
-                G.add_nodes_from(self.full_node_list)  # Verificare come funge
+                G.add_nodes_from(self.full_node_list)
                 for line in file:
                     node1, node2 = map(int, line.strip().split())
-                    # edges = [[mapping[u], mapping[v]] for u, v in edges]
                     G.add_edge(node1, node2, weight=1)  # Devo fare il mapping
                 spmat = nx.to_scipy_sparse_matrix(G, nodelist=self.full_node_list)
-            # spmat = get_sp_adj_mat(original_graph_path, self.full_node_list, sep=sep)
-            # spmat = sp.coo_matrix((np.exp(alpha * spmat.data), (spmat.row, spmat.col)), shape=(self.node_num, self.node_num))
             if add_eye:
                 spmat = spmat + sp.eye(spmat.shape[0])
             if normalize:
@@ -69,8 +66,6 @@ class DataLoader:
                     node, community = line.split()
                     comm[self.node2idx_dict[int(node)]] = int(community)
                     active_nodes.append(self.node2idx_dict[int(node)])
-            # df_label = pd.read_csv(label_file_path, sep=sep, header=0)
-            # label_arr = df_label.values
             nodes = comm.keys()
             for node in self.full_node_list:
                 if self.node2idx_dict[node] not in nodes:

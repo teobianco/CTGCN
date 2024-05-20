@@ -333,11 +333,12 @@ class UnsupervisedEmbedding(BaseEmbedding):
     def learn_embedding(self, adj_list, x_list, edge_list=None, node_dist_list=None, time_length=1, labels=None, gamma=1, epoch=50, batch_size=1024, lr=1e-3, start_idx=0, weight_decay=0., model_file='ctgcn', load_model=False, shuffle=True, export=True):
         print('start learning embedding!')
         model, loss_model, optimizer, _ = self.prepare(load_model, model_file, lr=lr, weight_decay=weight_decay)
-        semi_supervised_loss = SemiSupervisedLoss(time_length, model)  #Capire se aggiungere qualcosa all'init
+        # Initialize semi-supervised loss
+        semi_supervised_loss = SemiSupervisedLoss(time_length, model)
         semi_supervised_loss.to(self.device)
         batch_num = self.get_batch_info(batch_size)
         all_nodes = torch.arange(self.node_num, device=self.device)
-        # Sposto labels sulla GPU
+        # Move labels to device
         for i in range(time_length):
             labels[i] = {key: torch.tensor(value).to(self.device) for key, value in labels[i].items()}
         output_list = []
@@ -352,12 +353,14 @@ class UnsupervisedEmbedding(BaseEmbedding):
                 batch_indices = node_indices[j * batch_size: min(self.node_num, (j + 1) * batch_size)]
                 t1 = time.time()
                 loss_input_list, output_list, hx = self.get_model_res(adj_list, x_list, edge_list, node_dist_list, model, batch_indices, hx)
-                # loss = loss_model(loss_input_list) + gamma*semi_supervised_loss(loss_input_list, labels)
+                # Compute model loss
                 loss_1 = loss_model(loss_input_list)
                 all_batch_labels = []
                 for t in range(time_length):
                     all_batch_labels.append(torch.tensor([labels[t].get(key.item()) for key in batch_indices]).to(self.device))
+                # Compute semi-supervised loss
                 loss_2 = semi_supervised_loss(loss_input_list, all_batch_labels)
+                # Combine losses with weight gamma
                 loss = loss_1 + gamma*loss_2
                 # print('Added semi-supervision to loss')
                 loss.backward()

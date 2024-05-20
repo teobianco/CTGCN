@@ -1,21 +1,20 @@
 import numpy as np
-from sklearn.cluster import DBSCAN
+from sklearn.cluster import DBSCAN, KMeans
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 from evaluation.metrics import *
 from sklearn.manifold import TSNE
+import pandas as pd
 
 
-def evaluate_community_detection(dict_train_communities, dict_communities, embeddings, active_nodes, path_save_communities, path_save_scores, time_step, emb_dim, data_loader):
-    """Evaluate community detection using DBSCAN"""
+def evaluate_community_detection(dict_train_communities, dict_communities, embeddings, active_nodes, path_save_communities, path_save_scores, time_step, emb_dim, data_loader, do_dbscan=True):
+    """Evaluate community detection using DBSCAN or KMeans clustering algorithm"""
     # Consider just active nodes
-    # embeddings = embeddings[active_nodes]
     print('Embeddings shape of active nodes is: ', embeddings.shape)
     # Eliminate from dict_communities nodes that have value -1
     dict_communities = {key: value for key, value in dict_communities.items() if value != -1}
     # Create true_labels as a 1-D array
     true_labels = np.array(list(dict_communities.values()))
-    # Create true_communities as a list of lists
     # Create an empty dictionary to store lists of keys
     true_communities = {}
     # Iterate through the dictionary
@@ -27,20 +26,16 @@ def evaluate_community_detection(dict_train_communities, dict_communities, embed
         true_communities[value].append(key)
     # Convert the result dictionary into a list of lists
     true_communities = [v for v in true_communities.values()]
-    # Standardize the data
-    # embeddings = StandardScaler().fit_transform(embeddings)
-    # Plot embeddings
-    # plot_embeddings(embeddings, true_labels)
-    # Detect communities with DBSCAN
-    pred_labels = get_clusters(embeddings, emb_dim)
+    # Detect communities with DBSCAN or KMEANS
+    if do_dbscan:
+        pred_labels = get_clusters(embeddings, emb_dim)
+    else:
+        pred_labels = get_kmeans_clusters(embeddings, dict_train_communities)
     # print('Predicted labels are: ', pred_labels)
     # Create pred_communities as a list of lists excluding labels with value -1
     pred_communities = []
     for i in range(max(pred_labels) + 1):
         pred_communities.append([active_nodes[j] for j in range(len(pred_labels)) if pred_labels[j] == i])
-    # Some prints
-    # print('True communities are ', true_communities)
-    # print('Predicted communities are ', pred_communities)
     # Before evaluating results we erase from pred_communities nodes used in training
     # So first we delete from dict_train_communities the nodes that have value -1
     dict_train_communities = {key: value for key, value in dict_train_communities.items() if value != -1}
@@ -60,9 +55,15 @@ def evaluate_community_detection(dict_train_communities, dict_communities, embed
     idx2node = {value: key for key, value in data_loader.node2idx_dict.items()}
     nodes = [idx2node[i] for i in active_nodes]
     modality = 'w' if time_step == 0 else 'a'
-    with open(path_save_scores + '/score.txt', modality) as f:
+    if do_dbscan:
+        score_name = 'score'
+        pred_name = 'pred_commun'
+    else:
+        score_name = 'score_kmeans'
+        pred_name = 'pred_commun_kmeans'
+    with open(path_save_scores + f'/{score_name}.txt', modality) as f:
         f.write("Time {time}: F1 Score: {avgf1} , Jaccard Score: {avgjaccard} , NMI: {nmi}\n".format(time=time_step, avgf1=avgf1, avgjaccard=avgjaccard, nmi=nmi))
-    with open(path_save_communities + '/pred_commun_timestep{time}.txt'.format(time=time_step), 'w') as f:
+    with open(path_save_communities + f'/{pred_name}_timestep{time_step}.txt', 'w') as f:
         for i in range(len(pred_labels)):
             f.write("{node} {label}\n".format(node=nodes[i], label=pred_labels[i]))
 
@@ -70,10 +71,18 @@ def evaluate_community_detection(dict_train_communities, dict_communities, embed
 def get_clusters(embeddings, emb_dim):
     """Get clusters from a given set of embeddings"""
     struct_layer = emb_dim
-    min_samples = int(struct_layer / 2)  # min_samples is 2 * dim of the embeddings
+    min_samples = int(struct_layer / 2)  # min_samples is dim/2 of the embeddings
     print('min_samples is: ', min_samples)
     eps = infer_epsilon(embeddings, min_samples)
     clustering = DBSCAN(eps=eps, min_samples=min_samples).fit(embeddings)
+    return clustering.labels_
+
+
+def get_kmeans_clusters(embeddings, dic_train_communities):
+    """Get clusters from a given set of embeddings using KMeans"""
+    num_train_comm = len(set(dic_train_communities.values()))
+    print('Number of train communities is: ', num_train_comm)
+    clustering = KMeans(n_clusters=num_train_comm).fit(embeddings)
     return clustering.labels_
 
 
@@ -87,7 +96,6 @@ def infer_epsilon(embeddings, min_samples):
     theta = get_data_radiant(distances)
     elbow = find_elbow(distances, theta)
     # Find point of maximum curvature in the sorted k-dist graph
-    # distances = distances[:, 1]
     print('Eps is ', distances[elbow, 1])
     return distances[elbow, 1]
 
@@ -107,14 +115,43 @@ def find_elbow(data, theta):
     return np.where(rotated_vector == rotated_vector[:, 1].min())[0][0]
 
 
-# def plot_embeddings(embeddings, labels_3):
-#     # Perform t-SNE projection
-#     tsne = TSNE(n_components=2, perplexity=30, random_state=42)
-#     Y_3 = tsne.fit_transform(embeddings)
-#     # Create a scatter plot and color points by their labels
-#     fig, ax = plt.subplots(1, 1, figsize=(16, 6))
-#     scatter_3 = ax.scatter(Y_3[:, 0], Y_3[:, 1], c=labels_3, cmap='nipy_spectral')
-#     ax.set_title('t-SNE time 3')
-#     plt.colorbar(scatter_3, ax=ax, label='Labels')
-#
-#     plt.show()
+def load_data(dataset, method, i, train_ratio):
+    """Load data from a given dataset and method"""
+    train_path = f'./data/{dataset}/train_set/train_ratio_{train_ratio}/train_set_timestep{i}.txt'
+    test_path = f'./data/{dataset}/test_set/train_ratio_{train_ratio}/test_set_timestep{i}.txt'
+    embeddings_path = f'./data/{dataset}/2.embedding/{method}/graph{i}.csv'
+    nodes_path = f'./data/{dataset}/nodes_set/nodes.csv'
+    path_label = f'./data/{dataset}/3.label/communities{i}.txt'
+    # First we want to create a dict to map nodes into their index
+    keys = []
+    i = 0
+    with open(nodes_path, 'r') as file:
+        for line in file:
+            keys.append(int(line.strip()))
+            i += 1
+    node2idx_dict = {keys[i]: i for i in range(len(keys))}
+    with open(train_path, 'r') as file:
+        train_dict = {}
+        for line in file:
+            comm = list(map(int, line.split()))
+            train_dict[node2idx_dict[comm[0]]] = comm[1]
+    with open(test_path, 'r') as file:
+        test_dict = {}
+        for line in file:
+            comm = list(map(int, line.split()))
+            test_dict[node2idx_dict[comm[0]]] = comm[1]
+    active_nodes = sorted(list(set(train_dict.keys()).union(set(test_dict.keys()))))
+    embeddings = pd.read_csv(embeddings_path, index_col=0, sep='\t')
+    nodes_set = pd.read_csv(nodes_path, names=['node'])
+    active_filter = nodes_set.loc[active_nodes, 'node'].tolist()
+    embeddings = embeddings.reindex(index=active_filter)
+    emb_dim = embeddings.shape[1]
+    # Dataloader is an object of a class that contains the node2idx_dict
+    dataloader = Dataloader_kmeans(node2idx_dict)
+    return train_dict, test_dict, embeddings, active_nodes, dataloader, emb_dim
+
+
+class Dataloader_kmeans:
+    """Dataloader class for KMeans"""
+    def __init__(self, node2idx_dict):
+        self.node2idx_dict = node2idx_dict

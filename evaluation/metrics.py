@@ -1,6 +1,8 @@
 from math import log
 import numpy as np
-from sklearn.metrics import normalized_mutual_info_score as NMI
+
+# Metrics taken from KDD2022CLARE repository https://github.com/FDUDSDE/KDD2022CLARE
+# Author: FDUDSDE
 
 
 def compare_comm(pred_comm, true_comm):

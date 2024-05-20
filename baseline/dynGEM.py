@@ -54,48 +54,28 @@ class DynGEMLoss(nn.Module):
         xi_pred, x_i, penalty_i = input_list[0], input_list[1], input_list[2]
         xj_pred, x_j, penalty_j = input_list[3], input_list[4], input_list[5]
         hx_i, hx_j, edge_weight = input_list[6], input_list[7], input_list[8]
-        labels = input_list[9]  # Dizionario
+        labels = input_list[9]
         nodes = input_list[10]
 
+        # DynGEM Loss (reconstruction loss)
         node_num = xj_pred.shape[1]
         xi_loss = torch.mean(torch.sum(torch.square((xi_pred - x_i) * penalty_i[:, 0:node_num]), dim=1) / penalty_i[:, node_num])
         xj_loss = torch.mean(torch.sum(torch.square((xj_pred - x_j) * penalty_j[:, 0:node_num]), dim=1) / penalty_j[:, node_num])
         hx_loss = torch.mean(torch.sum(torch.square(hx_i - hx_j), dim=1) * edge_weight)
-        # Part for label loss
+        # Label Loss (Semi-supervised)
         labels = torch.tensor([labels[node_id] for node_id in nodes])
-        # labels = torch.tensor(labels.values())
-        # grouped_hx_i = []
-        # for label in torch.unique(labels):
-        #     if label != -1:
-        #         mask = labels == label  # Maschera booleana per selezionare i nodi con la label corrente
-        #         grouped_hx_i.append(hx_i[mask])
-        # grouped_hx_i = torch.cat(grouped_hx_i, dim=0)
-        # diff = grouped_hx_i.unsqueeze(0) - grouped_hx_i.unsqueeze(1)
-        # label_loss = torch.sum(diff ** 2) / diff.numel()
         label_loss = 0
         num = 0  # Number of different labels with more than one node in the batch. I use it to calculate the average of the label loss
         for label in torch.unique(labels):
             if label != -1:
-                mask = labels == label  # Maschera booleana per selezionare i nodi con la label corrente
+                mask = labels == label  # Boolean mask to select nodes with the current label
                 group = hx_i[mask]
                 if group.shape[0] != 1:
                     num += 1
                     diff = group.unsqueeze(0) - group.unsqueeze(1)
                     label_loss += (torch.sum(diff ** 2)) / (diff.shape[0] * (
                                 diff.shape[0] - 1))  # Denominator is the same as (2*math.comb(diff.shape[0],2))
-        label_loss = label_loss/num if num != 0 else 0
-        # label_loss = 0
-        # # Concat hx_i and hx_j
-        # hx = torch.cat((hx_i, hx_j), dim=0)
-        # # Merge dictionaries label_i and label_j
-        # label = label_i.extend(label_j)  #VERIFICARE SE FUNZIONA PER I DIZIONARI
-        # for el in label.values():
-        #     if el != -1:
-        #         ids = [k for k, v in label.items() if v == el]
-        #         for i in range(len(ids)):
-        #             for j in range(i + 1, len(ids)):
-        #                 label_loss += torch.square(hx[ids[i]] - hx[ids[j]])
-        # label_loss = torch.mean(label_loss)
+        label_loss = label_loss/num if num != 0 else 0 # Average of the label loss
         reconstruction_loss = xi_loss + xj_loss + self.alpha * hx_loss
         label_loss = self.gamma * label_loss
         regularization_loss = self.regularization(model)

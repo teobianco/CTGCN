@@ -1,7 +1,7 @@
 import numpy as np
 
-dataset = 'Youtube'
-setting = 'setting2'
+dataset = 'Amazon'
+setting = 'setting3'
 method = 'DynGEM'
 
 
@@ -25,6 +25,6 @@ def mean_n_std(dataset, setting, method):
     print('NMI mean: ', np.mean(nmi))
     print('NMI std: ', np.std(nmi))
 
-mean_n_std(dataset, setting, method)
 
+mean_n_std(dataset, setting, method)
 

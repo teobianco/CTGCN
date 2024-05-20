@@ -22,6 +22,7 @@ class StructureInfoGenerator:
         self.label_base_path = os.path.abspath(os.path.join(base_path, label_folder))
 
         node_path = os.path.abspath(os.path.join(base_path, node_file))
+        # Look for node file and if it doesn't exist, create it
         try:
             nodes_set = pd.read_csv(node_path, names=['node'])
         except FileNotFoundError:

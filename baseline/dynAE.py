@@ -295,7 +295,7 @@ class DynamicEmbedding(BaseEmbedding):
     def learn_embedding(self, adj_list, label_list, active_nodes, epoch=50, lr=1e-3, idx=0, weight_decay=0., model_file='dynAE', load_model=False, export=True, args=None):
         print('start learning embedding!')
         model, loss_model, optimizer, _ = self.prepare(load_model, model_file, classifier_file=None, lr=lr, weight_decay=weight_decay)
-        batch_size, batch_num, train_size = self.get_batch_info(adj_list, model)  #batch_num viene strano (208)
+        batch_size, batch_num, train_size = self.get_batch_info(adj_list, model)
 
         print('start training!')
         st = time.time()
@@ -342,7 +342,6 @@ def dyngem_embedding(method, args):
 
     # DynGEM, DynAE, DynRNN, DynAERNN common params
     base_path = args['base_path']
-    # Elimina il primo carattere della stringa base_path
     base_path = base_path[1:]
     origin_folder = args['origin_folder']
     label_folder = args['label_folder']
@@ -387,6 +386,7 @@ def dyngem_embedding(method, args):
     nu2 = args['nu2']
     bias = args['bias']
 
+    # Create all necessary folders
     origin_base_path = os.path.abspath(os.path.join(base_path, origin_folder))
     label_base_path = os.path.abspath(os.path.join(base_path, label_folder))
     community_base_path = os.path.abspath(os.path.join(base_path, community_folder))
@@ -475,7 +475,6 @@ def dyngem_embedding(method, args):
         emb = pd.read_csv(os.path.join(base_path, embedding_folder, f'graph{idx}.csv'), sep='\t', index_col=0)
         active_filter = nodes_set.loc[active_nodes, 'node'].tolist()
         emb = emb.reindex(index=active_filter)
-        # emb = emb.loc[active_nodes]
         emb_dim = emb.shape[1]
         cd.evaluate_community_detection(train_labels[-1], test_labels[-1], emb, active_nodes, community_base_path, score_base_path, idx, emb_dim, data_loader)
         # Print mean and std of community detection scores
