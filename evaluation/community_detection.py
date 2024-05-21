@@ -68,6 +68,7 @@ def evaluate_community_detection(dict_train_communities, dict_communities, embed
             f.write("{node} {label}\n".format(node=nodes[i], label=pred_labels[i]))
 
 
+# function to perform DBSCAN clustering
 def get_clusters(embeddings, emb_dim):
     """Get clusters from a given set of embeddings"""
     struct_layer = emb_dim
@@ -78,6 +79,7 @@ def get_clusters(embeddings, emb_dim):
     return clustering.labels_
 
 
+# function to perform K-Means clustering
 def get_kmeans_clusters(embeddings, dic_train_communities):
     """Get clusters from a given set of embeddings using KMeans"""
     num_train_comm = len(set(dic_train_communities.values()))
@@ -86,6 +88,7 @@ def get_kmeans_clusters(embeddings, dic_train_communities):
     return clustering.labels_
 
 
+# Next 3 functions use elbow heuristic to find DBSCAN epsilon parameter
 def infer_epsilon(embeddings, min_samples):
     """Get the best DBSCAN parameter epsilon for a given set of embeddings using heuristic search"""
     nbrs = NearestNeighbors(n_neighbors=min_samples).fit(embeddings)
@@ -115,6 +118,7 @@ def find_elbow(data, theta):
     return np.where(rotated_vector == rotated_vector[:, 1].min())[0][0]
 
 
+# Next 2 functions are needed in file k_means_clustering.py in order to perform K-Means clustering using embeddings we already found (but that we may have used for DBSCAN clustering)
 def load_data(dataset, method, i, train_ratio):
     """Load data from a given dataset and method"""
     train_path = f'./data/{dataset}/train_set/train_ratio_{train_ratio}/train_set_timestep{i}.txt'
