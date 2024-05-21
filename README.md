@@ -42,9 +42,11 @@ https://pytorch-geometric.com/whl/.
             facebook/
             ......
         evaluation/                  (evaluation task: community detection and its metrics)  
-        preprocessing/               (preprocessing tasks, i.e. k-core decomposition, random walk)  
+        preprocessing/               (preprocessing tasks, i.e. k-core decomposition, random walk)
+        data_characteristics.py      (compute main characteristics of datasets)
         embedding.py                 (data loader and different kinds of embedding)  
         graph.py                     (dynamic graph generation and scalability data generation)  
+        k_means_clustering.py        (perform K-means clustering with embeddings already calculated. You may need this file if you performed community detection with DBSCAN)
         layers.py                    (All layers used in CTGCN)  
         main.py                      (Main file of this project)
         metrics.py                   (Loss function)  
