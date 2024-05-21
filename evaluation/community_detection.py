@@ -7,7 +7,7 @@ from sklearn.manifold import TSNE
 import pandas as pd
 
 
-def evaluate_community_detection(dict_train_communities, dict_communities, embeddings, active_nodes, path_save_communities, path_save_scores, time_step, emb_dim, data_loader, do_dbscan=True):
+def evaluate_community_detection(dict_train_communities, dict_communities, embeddings, active_nodes, path_save_communities, path_save_scores, time_step, emb_dim, data_loader, do_dbscan=False):
     """Evaluate community detection using DBSCAN or KMeans clustering algorithm"""
     # Consider just active nodes
     print('Embeddings shape of active nodes is: ', embeddings.shape)
