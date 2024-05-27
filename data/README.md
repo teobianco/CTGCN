@@ -1,2 +1,2 @@
 # Data
-As some data sets are too large, we move those data sets into Google Drive and only retain the UCI data set for example. Other data sets can be downloaded from https://drive.google.com/drive/folders/14lJ8XFK3qN5_ZqoEtvBj9xvVDgtZU3Rn?usp=sharing.
+As putting all dataset would be too heavy, we just provide all synthetic datasets (`Syn_Const`, `Syn_Gro` and `Syn_Sh`) and one of the semi-synthetic generated with DynamizeGraph (`Amazon_setting1`). All other semi-synthetic datasets can be found in the folder containing DynamizeGraph generator. 
