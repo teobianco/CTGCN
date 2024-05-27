@@ -335,10 +335,8 @@ class DynamicEmbedding(BaseEmbedding):
 
 def dyngem_embedding(method, args):
     assert method in ['DynGEM', 'DynAE', 'DynRNN', 'DynAERNN']
-    from baseline.dynRNN import DynRNN
-    from baseline.dynAERNN import DynAERNN
     from baseline.dynGEM import DynGEM, DynGEMLoss, DynGEMBatchGenerator, DynGEMBatchPredictor
-    model_dict = {'DynGEM': DynGEM, 'DynAE': DynAE, 'DynRNN': DynRNN, 'DynAERNN': DynAERNN}
+    model_dict = {'DynGEM': DynGEM, 'DynAE': DynAE}
 
     # DynGEM, DynAE, DynRNN, DynAERNN common params
     base_path = args['base_path']

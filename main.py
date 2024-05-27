@@ -43,7 +43,6 @@ def embedding_task(method, args):
     assert method in get_supported_methods()
 
     from baseline.dynAE import dyngem_embedding
-    from baseline.timers import timers_embedding
     from train import gnn_embedding
     args['has_cuda'] = True if torch.cuda.is_available() else False
 
@@ -56,40 +55,8 @@ def embedding_task(method, args):
 
     if method in ['DynGEM', 'DynAE', 'DynRNN', 'DynAERNN']:
         dyngem_embedding(method, args)
-    elif method == 'TIMERS':
-        timers_embedding(args)
     else:
         gnn_embedding(method, args)
-
-
-# Link prediction task
-def link_prediction_task(args):
-    from evaluation.link_prediction import link_prediction
-    link_prediction(args)
-
-
-# Node classification task
-def node_classification_task(args):
-    from evaluation.node_classification import node_classification
-    node_classification(args)
-
-
-# Edge classification task
-def edge_classification_task(args):
-    from evaluation.edge_classification import edge_classification
-    edge_classification(args)
-
-
-# Graph centrality prediction task
-def centrality_prediction_task(args):
-    from evaluation.centrality_prediction import centrality_prediction
-    centrality_prediction(args)
-
-
-# Structural node similarity prediction task
-def similarity_prediction_task(args):
-    from evaluation.similarity_prediction import similarity_prediction
-    similarity_prediction(args)
 
 
 # The main function of the CTGCN project
@@ -112,21 +79,6 @@ def main(argv):
             raise AttributeError('Embedding method parameter is needed for the graph embedding task!')
         param_dict = args_dict[args.method]
         embedding_task(args.method, param_dict)
-    elif args.task == 'link_pred':
-        args_dict = config_dict[args.task]
-        link_prediction_task(args_dict)
-    elif args.task == 'node_cls':
-        args_dict = config_dict[args.task]
-        node_classification_task(args_dict)
-    elif args.task == 'edge_cls':
-        args_dict = config_dict[args.task]
-        edge_classification_task(args_dict)
-    elif args.task == 'cent_pred':
-        args_dict = config_dict[args.task]
-        centrality_prediction_task(args_dict)
-    elif args.task == 'sim_pred':
-        args_dict = config_dict[args.task]
-        similarity_prediction_task(args_dict)
     else:
         raise AttributeError('Unsupported task!')
 
@@ -135,5 +87,5 @@ if __name__ == '__main__':
     # Set random seed
     torch.manual_seed(150799)
     np.random.seed(150799)
-    #Execute code
+    # Execute code
     main(sys.argv)
