@@ -39,7 +39,7 @@ https://pytorch-geometric.com/whl/.
                 train_set/
                     train_ratio_0.5/           (training sets for each timestep, using a train ratio = 0.5)
                 characteristics.txt        (txt files containing main dataset characteristics)
-            facebook/
+            Syn_Const/
             ......
         evaluation/                  (evaluation task: community detection and its metrics)  
         preprocessing/               (preprocessing tasks, i.e. k-core decomposition, random walk)
