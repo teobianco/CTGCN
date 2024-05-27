@@ -11,6 +11,7 @@ The parameters used in the **preprocessing** task is shown as follows. Note that
 |:----:|:----:| :----: | 
 | base_path | str | base path of a data set |
 | origin_folder | str | graph folder path relative to `base_path` |
+| label_folder | str | community labels folder path relative to `base_path` |
 | core_folder | str |  k-core subgraphs folder path relative to `base_path` <br> (**optional**, value: can be null) |
 | node_file | str | node file path relative to `base_path` |
 | walk_pair_folder | str | random walk node co-occurring pairs file folder path relative to `base_path` |
@@ -29,9 +30,9 @@ We also provide a bool parameter `generate_core` to control the generation of k-
 
 ## Community Detection
 
-The community detection task contains the execution of several graph embedding methods. The parameters of all supported graph embedding methods are shown below. 
+The community detection task contains the execution of the three graph embedding methods (DynGEM, CTGCN_C, CTGCN-S) and it uses the embedding they generated to perform community detection through clustering of embeddings. The parameters are shown below. 
 
-For a DynGEM graph embedding method, its parameter set is the union of **Common parameters** and **DynamicGEM parameters**
+For DynGEM graph embedding method, its parameter set is the union of **Common parameters** and **DynamicGEM parameters**
 
 For a GNN based graph embedding method (CTGCN-C and CTGCN-S), its parameter set is the union of **Common parameters**, **CTGCN-C and CTGCN-S parameters** and **Learning parameters**(optional)
 
@@ -42,11 +43,16 @@ Common parameters are input parameters used by all supported graph embedding met
 |:----:|:----:| :----: | 
 | base_path | str | base path of a data set |
 | origin_folder | str | graph folder path relative to `base_path` |
+| label_folder | str | community labels folder path relative to `base_path` |
 | core_folder | str | k-core subgraph folder path relative to `base_pah` <br> (**optional**, value: can be null) |
 | embed_folder | str | embedding folder path relative to `base_path` |
 | model_folder | str | graph embedding model folder path relative to `base_path` | 
 | model_file | str | model file name <br> (value: **can be null**, then model won't be saved!) |
 | node_file | str | node file path relative to `base_path` |
+| community_folder | str | predicted communities folder path relative to `base_path` |
+| score_folder | str | community detection score folder path relative to `base_path` |
+| train_folder | str | community train set folder path relative to `base_path` |
+| test_folder | str | community test set folder path relative to `base_path` |
 | file_sep | str | file separator for all files (i.e. '\t') |
 | start_idx | int | start timestamp index of dynamic graphs  |
 | end_idx | int | end timestamp index of dynamic graphs <br> (default: -1, means the last timestamp, it supports negative values) |
@@ -61,6 +67,9 @@ Common parameters are input parameters used by all supported graph embedding met
 | shuffle | bool | whether or not to shuffle the data for training |
 | export | bool | whether or not to save node embedding files for each timestamp |
 | record_time | bool | whether or not to record the running time |
+| gamma | float | relative weight hyper-parameter of semi-supervised loss in each method|
+| already_train_test | bool | whether the subdivision of community labels into train and test set is already done or not. If True, the algorithm expects to find them in folders `train_folder` and `test_folder`. If False, the algorithm subdivides community labels into train and test sets and saves them into `train_folder` and `test_folder`|
+| train_ratio | float | the ratio of training nodes to all nodesin each graph when subdividing community lables into train and test set. It is needed only if parameter `already_train_test` is False |
 
 Note that **optional** parameters can be omitted in the configuration file if this optional parameter is not needed.  Moreover, the timestamp range is a closed interval \[start_idx, end_idx\]. The program will add 1 to `end_idx`, making the range into a left-closed interval. 
 
@@ -79,7 +88,7 @@ Here we provide parameters used by DynGEM
 | n_units | list |  hidden layer dimension list of its encoder |
 | alpha | float | relative weight hyper-parameter of its first order proximity loss |
 
-### GNN parameters
+### CTGCN-C and CTGCN-S
 Here we provide input parameters of all supported GNN methods. 
 
 #### CTGCN-C and CTGCN-S parameters
@@ -104,23 +113,20 @@ Note that `learning_type` is a parameter for choosing different learning strateg
 Note that if `max_core` is greater than the k-core number of a graph, then all k-core subgraphs are used in CGCN layers.
 
 #### Learning parameters
-Learning parameters are parameters related to unsupervised learning or supervised learning. These parameters are all **optional parameters**. 
+Learning parameters are parameters related to unsupervised part of CTGCN-C loss function. These parameters are all **optional parameters**. 
 
-| **Parameter** | **Type** | **Description** | Usage |
-|:----:|:----:| :----: | :----: |
-| walk_pair_folder | str | random walk co-occurring node pairs folder path relative to `base_path` | Unsupervised Learning
-| node_freq_folder | str | random walk node frequency folder path relative to `base_path` | Unsupervised Learning
-| neg_num | int | negative sample number |  Unsupervised Learning |
-| Q | float | penalty weight of negative sampling term in negative sampling loss| Unsupervised Learning |
-| train_ratio | float | the ratio of training nodes(edges) to all nodes(edges) in each graph | Supervised Learning |
-| val_ratio | float | the ratio of validation nodes(edges) to all nodes(edges) in each graph | Supervised Learning |
-| test_ratio | float | the ratio of test nodes(edges) to all nodes(edges) in each graph | Supervised Learning |
+| **Parameter** | **Type** | **Description** |
+|:----:|:----:| :----: | 
+| walk_pair_folder | str | random walk co-occurring node pairs folder path relative to `base_path` |
+| node_freq_folder | str | random walk node frequency folder path relative to `base_path` | 
+| neg_num | int | negative sample number |  
+| Q | float | penalty weight of negative sampling term in negative sampling loss| 
 
-Note that `walk_pair_folder`, `node_freq_folder`, `neg_num` and `Q` are used for unsupervised negative sampling loss. Parameters from `cls_file` to `cls_activate_type` are used for building the node classifier or edge classifier. `train_ratio`, `val_ratio` and `test_ratio` are used for data split in supervised node classification, edge classification and link prediction. 
+All these parameters are used for unsupervised negative sampling loss (that in our work we used just for CTGCN-C).
 
-Moreover, the input_dim of a classifier is `embed_dim`, and the output_dim of a classifier is the unique label number.
-
-Here we introduce how to change different learning strategies.
+Here we introduce how to change different learning concerning the unsupervised part of loss functions strategies.
 
 - Unsupervised learning with negative sampling loss (`learning_type` = 'U-neg')
 - Unsupervised learning with its own loss (`learning_type` = 'U-own')
+
+Notice that in this work we set `learning_type` = 'U-neg' for CTGCN-C and `learning_type` = 'U-own' for CTGCN-S.
