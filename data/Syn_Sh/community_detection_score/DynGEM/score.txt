@@ -1,0 +1,10 @@
+Time 0: F1 Score: 0.0605 , Jaccard Score: 0.0324 , NMI: 0.0097
+Time 1: F1 Score: 0.1341 , Jaccard Score: 0.0791 , NMI: 0.0175
+Time 2: F1 Score: 0.2427 , Jaccard Score: 0.1749 , NMI: 0.1553
+Time 3: F1 Score: 0.178 , Jaccard Score: 0.1126 , NMI: 0.0444
+Time 4: F1 Score: 0.2062 , Jaccard Score: 0.145 , NMI: 0.1482
+Time 5: F1 Score: 0.345 , Jaccard Score: 0.2761 , NMI: 0.3342
+Time 6: F1 Score: 0.2577 , Jaccard Score: 0.1977 , NMI: 0.1777
+Time 7: F1 Score: 0.3206 , Jaccard Score: 0.2585 , NMI: 0.2536
+Time 8: F1 Score: 0.2722 , Jaccard Score: 0.2154 , NMI: 0.1792
+Time 9: F1 Score: 0.3185 , Jaccard Score: 0.2453 , NMI: 0.1884
