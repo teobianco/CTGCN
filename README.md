@@ -68,7 +68,7 @@ We modified the original source code. There are two important functions: **prepr
 
 # Parameter Configurations
 
-All other configuration parameters are saved in configuration files. For more detailed configuration information. We provide detailed parameter configuration tutorials, please refer to [config/README.md](https://github.com/jhljx/CTGCN/tree/master/config). 
+All other configuration parameters are saved in configuration files. For more detailed configuration information. We provide detailed parameter configuration tutorials, please refer to [config/README.md](https://github.com/teobianco/CTGCN/tree/master/config). 
 
 # Supported Semi-Supervised Dynamic Graph Embedding Methods
 
@@ -77,22 +77,6 @@ We modified original source code from https://github.com/jhljx/CTGCN to provide 
 - Deep Embedding Method for Dynamic Graphs (DynGEM)　[\[paper\]](https://arxiv.org/abs/1805.11273)　[\[code\]](https://github.com/jhljx/CTGCN/blob/master/baseline/dynGEM.py)      
 - Connective Proximity Preserving Core-based Temporal Graph Convolutional Network (CTGCN-C)   [\[paper\]](https://arxiv.org/abs/2003.09902)   [\[code\]](https://github.com/jhljx/CTGCN)
 - Structural Similarity Preserving Core-based Temporal Graph Convolutional Network (CTGCN-S)   [\[paper\]](https://arxiv.org/abs/2003.09902)   [\[code\]](https://github.com/jhljx/CTGCN)
-
-# Supported Data Sets
-
-This project use several data sets in link prediction, node classification and graph centrality prediction tasks. The supported data sets are shown as follows:
-
-| **Data Set** | **Nodes** | **Edges** | **Max Degree** | **Max Core** | **Snapshots** |
-|:----:|:----:| :----: | :----: |:----: |:----: |
-| UCI | 1899 | 59835 | 198 | 16 | 7 |
-| AS  | 6828 | 1947704 | 1458 | 13 | 100 |
-| Math | 24740 | 323357 | 231 | 15 | 77 |
-| Facebook | 60730 | 607487 | 203 | 9 | 27 |
-| Enron | 87036 | 530284 | 1150 | 22 | 38 |
-| America-Air | 1190 | 13599 | 238 | 64 | 10 |
-| Europe-Air | 399 | 5995 | 202 | 33 | 10 | 
-
-In above data sets, America-Air and Europe-Air are synthetic dynamic graphs, while others are real-world dynamic graphs. Most of the aforementioned graph embedding methods can be trained on an 8G GPU when using UCI, AS, America-Air or Europe-Air data sets. For large-scale graphs such as Facebook and Enron, we recommend you to run those methods on GPU with larger memory or directly train those methods on CPU.
 
 # Notes
 1. Origin graph file names must be timestamp format or integer number format, otherwise when training dynamic embedding, sorted(f_list) may return a wrong order of files.
