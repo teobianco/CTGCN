@@ -1,7 +1,7 @@
 # DynGEM and CTGCN
 This repository includes the source code relative to baseline methods DynGEM, CTGCN-C and CTGCN-S. It is based on the source code of paper: [K-Core based Temporal Graph Convolutional Network for Dynamic Graphs](https://ieeexplore.ieee.org/document/9240056).
 
-Basing on the basic methods described in the original source code from repository https://github.com/jhljx/CTGCN, we modified methods DynGEM, CTGCN-CC and CTGCN-S in order to make them semi-spuervised.
+Basing on methods described in the original source code from repository https://github.com/jhljx/CTGCN, we modified methods DynGEM, CTGCN-CC and CTGCN-S in order to make them semi-spuervised.
 
 # Packages Requirements
 - [Python](https://www.python.org/downloads/) >= 3.6
