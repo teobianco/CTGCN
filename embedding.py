@@ -371,7 +371,11 @@ class UnsupervisedEmbedding(BaseEmbedding):
                 t2 = time.time()
                 self.clear_cache()
                 print('epoch', i + 1, ', batch num = ', j + 1, ', loss:', loss.item(), ', cost time: ', t2 - t1, ' seconds!')
-                print('CTGCN loss: ', loss_1.item(), ' , Label loss: ', loss_2.item())
+                if type(loss_2) == torch.Tensor:
+                    what_to_print = loss_2.item()
+                else:
+                    what_to_print = loss_2
+                print('CTGCN loss: ', loss_1.item(), ' , Label loss: ', what_to_print)
         print('end unsupervised training!')
         en = time.time()
         cost_time = en - st
@@ -384,4 +388,5 @@ class UnsupervisedEmbedding(BaseEmbedding):
         del adj_list, x_list, output_list, model
         self.clear_cache()
         print('learning embedding total time: ', cost_time, ' seconds!')
+        print()
         return cost_time

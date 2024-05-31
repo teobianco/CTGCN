@@ -1,9 +1,6 @@
-import numpy as np
 from sklearn.cluster import DBSCAN, KMeans
 from sklearn.neighbors import NearestNeighbors
-from sklearn.preprocessing import StandardScaler
 from evaluation.metrics import *
-from sklearn.manifold import TSNE
 import pandas as pd
 
 
@@ -13,6 +10,8 @@ def evaluate_community_detection(dict_train_communities, dict_communities, embed
     print('Embeddings shape of active nodes is: ', embeddings.shape)
     # Eliminate from dict_communities nodes that have value -1
     dict_communities = {key: value for key, value in dict_communities.items() if value != -1}
+    # Eliminate from dict_train_communities nodes that have value -1
+    dict_train_communities = {key: value for key, value in dict_train_communities.items() if value != -1}
     # Create true_labels as a 1-D array
     true_labels = np.array(list(dict_communities.values()))
     # Create an empty dictionary to store lists of keys
@@ -37,9 +36,7 @@ def evaluate_community_detection(dict_train_communities, dict_communities, embed
     for i in range(max(pred_labels) + 1):
         pred_communities.append([active_nodes[j] for j in range(len(pred_labels)) if pred_labels[j] == i])
     # Before evaluating results we erase from pred_communities nodes used in training
-    # So first we delete from dict_train_communities the nodes that have value -1
-    dict_train_communities = {key: value for key, value in dict_train_communities.items() if value != -1}
-    # Then we delete from pred_communities the nodes that are in dict_train_communities
+    # So we delete from pred_communities the nodes that are in dict_train_communities
     for key, value in dict_train_communities.items():
         for i in range(len(pred_communities)):
             if key in pred_communities[i]:
@@ -82,7 +79,13 @@ def get_clusters(embeddings, emb_dim):
 # function to perform K-Means clustering
 def get_kmeans_clusters(embeddings, dic_train_communities):
     """Get clusters from a given set of embeddings using KMeans"""
-    num_train_comm = len(set(dic_train_communities.values()))
+    dict_values = dic_train_communities.values()
+    # Check if dict_values[0] is int
+    if type(list(dict_values)[0]) is int:
+        int_values = list(dict_values)
+    else:
+        int_values = [el.item() for el in dict_values]  # Da verificare se funziona
+    num_train_comm = len(set(int_values))
     print('Number of train communities is: ', num_train_comm)
     clustering = KMeans(n_clusters=num_train_comm).fit(embeddings)
     return clustering.labels_

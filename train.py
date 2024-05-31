@@ -66,41 +66,23 @@ def get_input_data(method, idx, time_length, data_loader, args):
 
     if method in get_core_based_methods():  # CGCN-C, CGCN-S, CTGCN-C, CTGCN-S
         adj_list = core_adj_list
-    # elif method in ['TgGCN', 'TgGAT', 'TgSAGE', 'TgGIN', 'PGNN', 'GCRN']:
-    elif method in ['TgGCN', 'TgGAT', 'TgSAGE', 'TgGIN', 'PGNN']:  # VGRNN uses GAE architecture, so adj_list is needed!
-        adj_list = None
 
-    if method in ['EvolveGCN', 'CGCN-S', 'CTGCN-S'] and node_feature_path is None:
+    if method == 'CTGCN-S' and node_feature_path is None:
         init_type = args['init_type']
         std = args.get('std', 1e-4)
         x_list, input_dim = data_loader.get_degree_feature_list(origin_base_path, start_idx=idx, duration=time_length, sep=file_sep, init_type=init_type, std=std)
         # print('input_dim: ', input_dim)
-    else:   # GCN, TgGCN, GAT, TgGAT, SAGE, TgSAGE, GIN, TgGIN, PGNN, GCRN, VGRNN, CGCN-C, CTGCN-C
+    else:  # CTGCN-C
         x_list, input_dim = data_loader.get_feature_list(node_feature_path, start_idx=idx, duration=time_length, shuffle=False)
-        if method == 'VGRNN':
-            x_list = torch.stack(x_list)
 
     node_dist_list = None
-    if method == 'PGNN':
-        from baseline.pgnn import precompute_dist_data
-        node_num = args['node_num']  # not hyper-parameter
-        approximate = args['approximate']
-        node_dist_list = precompute_dist_data(edge_list, node_num, approximate=approximate)
-    # print('input_dim: ', input_dim, ', adj_list:', adj_list, ', x_list: ', x_list[0].shape, ', edge_list: ', edge_list[0].shape, ', node dist list: ', node_dist_list)
+
     return input_dim, adj_list, x_list, edge_list, node_dist_list
 
 
 def get_gnn_model(method, time_length, args):
     assert method in get_supported_gnn_methods()
 
-    #from baseline.gcn import GCN, TgGCN
-    #from baseline.gat import GAT, TgGAT
-    #from baseline.sage import SAGE, TgSAGE
-    #from baseline.gin import GIN, TgGIN
-    #from baseline.pgnn import PGNN
-    #from baseline.gcrn import GCRN
-    #from baseline.egcn import EvolveGCN
-    #from baseline.vgrnn import VGRNN
     from models import CGCN, CTGCN
 
     input_dim = args['input_dim']
@@ -109,61 +91,18 @@ def get_gnn_model(method, time_length, args):
     dropout = args.get('dropout', None)
     bias = args.get('bias', None)
 
-    if method == 'GCN':
-        return GCN(input_dim, hidden_dim, embed_dim, dropout=dropout, bias=bias)
-    elif method == 'GAT':
-        alpha = args['alpha']
-        head_num = args['head_num']
-        learning_type = args['learning_type']
-        return GAT(input_dim, hidden_dim, embed_dim, dropout=dropout, alpha=alpha, head_num=head_num, learning_type=learning_type)
-    elif method == "SAGE":
-        num_sample = args['num_sample']
-        pooling_type = args['pooling_type']
-        return SAGE(input_dim, hidden_dim, embed_dim, num_sample=num_sample, pooling_type=pooling_type, gcn=False, dropout=dropout, bias=bias)
-    elif method == 'GIN':
-        layer_num = args['layer_num']
-        mlp_layer_num = args['mlp_layer_num']
-        learn_eps = args['learn_eps']
-        neighbor_pooling_type = args['pooling_type']
-        return GIN(input_dim, hidden_dim, embed_dim, layer_num, mlp_layer_num, learn_eps, neighbor_pooling_type, dropout=dropout, bias=bias)
-    elif method in ['TgGCN', 'TgGAT', 'TgSAGE', 'TgGIN', 'PGNN', 'GCRN']:
-        feature_pre = args['feature_pre']
-        feature_dim = args['feature_dim']
-        layer_num = args['layer_num']
-        if method == 'TgGCN':
-            return TgGCN(input_dim, feature_dim, hidden_dim, embed_dim, feature_pre=feature_pre, layer_num=layer_num, dropout=dropout, bias=bias)
-        elif method == 'TgGAT':
-            return TgGAT(input_dim, feature_dim, hidden_dim, embed_dim, feature_pre=feature_pre, layer_num=layer_num, dropout=dropout, bias=bias)
-        elif method == 'TgSAGE':
-            return TgSAGE(input_dim, feature_dim, hidden_dim, embed_dim, feature_pre=feature_pre, layer_num=layer_num, dropout=dropout, bias=bias)
-        elif method == 'TgGIN':
-            return TgGIN(input_dim, feature_dim, hidden_dim, embed_dim, feature_pre=feature_pre, layer_num=layer_num, dropout=dropout, bias=bias)
-        elif method == 'PGNN':
-            return PGNN(input_dim, feature_dim, hidden_dim, embed_dim, feature_pre=feature_pre, layer_num=layer_num, dropout=dropout, bias=bias)
-        elif method == 'GCRN':
-            rnn_type = args['rnn_type']
-            return GCRN(input_dim, feature_dim, hidden_dim, embed_dim, feature_pre=feature_pre, layer_num=layer_num, dropout=dropout, bias=bias,
-                        duration=time_length, rnn_type=rnn_type)
-    elif method == 'VGRNN':
-        rnn_layer_num = args['rnn_layer_num']
-        conv_type = args['conv_type']
-        return VGRNN(input_dim, hidden_dim, embed_dim, rnn_layer_num=rnn_layer_num, conv_type=conv_type, bias=bias)
-    elif method == 'EvolveGCN':
-        egcn_type = args['model_type']
-        return EvolveGCN(input_dim, hidden_dim, embed_dim, egcn_type=egcn_type)
-    else:  # core-based gcn methods(both static and temporal core-based gcn)
-        trans_num = args['trans_layer_num']
-        diffusion_num = args['diffusion_layer_num']
-        hidden_dim = args['hid_dim']
-        model_type = args['model_type']
-        rnn_type = args['rnn_type']
-        trans_activate_type = args['trans_activate_type']
-        if method in ['CGCN-C', 'CGCN-S']:
-            return CGCN(input_dim, hidden_dim, embed_dim, trans_num=trans_num, diffusion_num=diffusion_num, bias=bias, rnn_type=rnn_type, model_type=model_type,
-                        trans_activate_type=trans_activate_type)
-        else:
-            return CTGCN(input_dim, hidden_dim, embed_dim, trans_num=trans_num, diffusion_num=diffusion_num, duration=time_length, bias=bias, rnn_type=rnn_type,
-                         model_type=model_type, trans_activate_type=trans_activate_type)
+    trans_num = args['trans_layer_num']
+    diffusion_num = args['diffusion_layer_num']
+    hidden_dim = args['hid_dim']
+    model_type = args['model_type']
+    rnn_type = args['rnn_type']
+    trans_activate_type = args['trans_activate_type']
+    if method in ['CGCN-C', 'CGCN-S']:
+        return CGCN(input_dim, hidden_dim, embed_dim, trans_num=trans_num, diffusion_num=diffusion_num, bias=bias, rnn_type=rnn_type, model_type=model_type,
+                    trans_activate_type=trans_activate_type)
+    else:
+        return CTGCN(input_dim, hidden_dim, embed_dim, trans_num=trans_num, diffusion_num=diffusion_num, duration=time_length, bias=bias, rnn_type=rnn_type,
+                     model_type=model_type, trans_activate_type=trans_activate_type)
 
 
 def get_loss(method, idx, time_length, data_loader, args):
@@ -346,4 +285,4 @@ def gnn_embedding(method, args):
     t2 = time.time()
     print('finish ' + method + ' embedding! cost time: ', t2 - t1, ' seconds!')
     # Print mean and std scores
-    mean_n_std(score_base_path + '/score.txt')
+    mean_n_std(score_base_path + '/score_kmeans.txt')
