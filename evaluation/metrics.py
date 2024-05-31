@@ -51,6 +51,8 @@ def eval_scores(pred_comms, true_comms, pred_labels, true_labels, tmp_print=Fals
     if tmp_print:
         print("AvgF1: {mean_score_all2} AvgJaccard: {mean_score_all3} NMI: {nmi_score} ".format(mean_score_all2=mean_score_all[2], mean_score_all3=mean_score_all[3], nmi_score=nmi_score) +
               "Detect percent: {percent}".format(percent=percent))
+        # Leave a blank line in stdout
+        print()
     return round(mean_score_all[2], 4), round(mean_score_all[3], 4), round(nmi_score, 4)
 
 
@@ -76,7 +78,11 @@ def get_nmi_score(pred, gt):
     def H_func(comm):
         p1 = len(comm) / overlapping_nodes
         p0 = 1 - p1
-        return h(p0) + h(p1)
+        ret = h(p0) + h(p1)
+        if ret == 0:
+            # Set ret to be very small but not 0
+            ret = 1e-10  # To avoid the case that the denominator is 0
+        return ret
 
     def h_xi_joint_yj(xi, yj):
         p11 = get_intersection(xi, yj) / overlapping_nodes
@@ -95,7 +101,10 @@ def get_nmi_score(pred, gt):
         res = h_xi_given_yj(xi, Y[0])
         for y in Y:
             res = min(res, h_xi_given_yj(xi, y))
-        return res / H_func(xi)
+        if res == float(0):
+            return 0
+        else:
+            return res / H_func(xi)
 
     def H_X_GIVEN_Y(X, Y):
         res = 0

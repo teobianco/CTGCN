@@ -405,6 +405,11 @@ def dyngem_embedding(method, args):
     # Same with test_path
     if not os.path.exists(test_path):
         os.makedirs(test_path)
+    # Create nodes file folder if it doesn't exist
+    node_folder_path_list = node_path.split('/')[:-1]
+    node_folder_path = '/'.join(node_folder_path_list)
+    if not os.path.exists(node_folder_path):
+        os.makedirs(node_folder_path)
     # Create file nodes.csv if it does not exist
     try:
         nodes_set = pd.read_csv(node_path, names=['node'])
@@ -475,8 +480,6 @@ def dyngem_embedding(method, args):
         emb = emb.reindex(index=active_filter)
         emb_dim = emb.shape[1]
         cd.evaluate_community_detection(train_labels[-1], test_labels[-1], emb, active_nodes, community_base_path, score_base_path, idx, emb_dim, data_loader)
-        # Print mean and std of community detection scores
-        mean_n_std(score_base_path + '/score.txt')
 
     # record time cost of DynGEM, DynAE, DynRNN, DynAERNN
     if record_time:
@@ -484,3 +487,6 @@ def dyngem_embedding(method, args):
         df_output.to_csv(os.path.join(base_path, method + '_time.csv'), sep=',', index=False)
     t2 = time.time()
     print('finish ' + method + ' embedding! cost time: ', t2 - t1, ' seconds!')
+
+    # Print mean and std of community detection scores
+    mean_n_std(score_base_path + '/score_kmeans.txt')
