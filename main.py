@@ -64,6 +64,9 @@ def main(argv):
     args = parse_args(argv[1:])
     print('args:', args)
     config_dict = parse_json_args(args.config[0])
+    # This function assigns free GPUs to the program
+    if config_dict[args.task][args.method]['use_cuda']:
+        assign_free_gpus(max_gpus=4)
     # pass configuration parameters used in different tasks
     if args.task == 'preprocessing':
         args_dict = config_dict[args.task]
@@ -71,9 +74,6 @@ def main(argv):
             raise AttributeError('Embedding method parameter is needed for the preprocessing task!')
         preprocessing_task(args.method, args_dict)
     elif args.task == 'embedding':
-        # This function assigns free GPUs to the program
-        if config_dict[args.task][args.method]['use_cuda']:
-            assign_free_gpus(max_gpus=4)
         args_dict = config_dict[args.task]
         if args.method is None:
             raise AttributeError('Embedding method parameter is needed for the graph embedding task!')

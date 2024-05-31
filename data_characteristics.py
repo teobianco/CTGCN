@@ -21,7 +21,7 @@ mean_community = []
 for t in range(10):
     num_nodes.append(count_lines(f'./data/{dataset}/3.label/communities{t}.txt'))
     num_edges.append(count_lines(f'./data/{dataset}/1.format/graph{t}.txt'))
-    num_communities.append(count_lines(f'../DynCLARE/dataset/{dataset}/time_{t}/{dataset}_{t}-1.90.cmty.txt'))
+    num_communities.append(count_lines(f'../CLARE/dataset/{dataset}/time_{t}/{dataset}_{t}-1.90.cmty.txt'))
     mean_degree.append(num_edges[-1]/num_nodes[-1])
     graph_path = f'./data/{dataset}/1.format/graph{t}.txt'
     node_path = f'./data/{dataset}/3.label/communities{t}.txt'
@@ -44,7 +44,7 @@ for t in range(10):
     biggest_community_size = 0
     smallest_community_size = 1000000
     all_sizes = []
-    with open(f'../DynCLARE/dataset/{dataset}/time_{t}/{dataset}_{t}-1.90.cmty.txt', 'r') as file:
+    with open(f'../CLARE/dataset/{dataset}/time_{t}/{dataset}_{t}-1.90.cmty.txt', 'r') as file:
         for line in file:
             size = len(line.split())
             all_sizes.append(size)
