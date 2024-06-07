@@ -86,6 +86,3 @@ We modified original source code from https://github.com/jhljx/CTGCN to provide 
 5. To generate the `nodes_set` folder and the file inside, inside each datasets folder, you have to run DynGEM method or instead to add this feature into CTGCN methods
 6. The original graph edge data doesn't need to have a reverse edge for each edge, because the graph read functions (`get_sp_adj_mat` and `get_nx_graph` functions in 'utils.py') will add reverse edges automatically. All graph data sets are read by `get_sp_adj_mat` and `get_nx_graph` functions.
 7. The original graph file header must be 'from_id, to_id, weight', or you will modify the 'get_nx_graph' function of 'utils.py' file. `get_sp_adj_mat` don't care the concrete header name, as long as the first 2 columns are node indices. If the original graph file has only 2 columns,  `get_sp_adj_mat` function will set edge weights as 1 in the 3rd column. If the original graph file has 3 columns, `get_sp_adj_mat` function will set edge weights as values the 3rd column.
-
-# Reference
-- [K-Core based Temporal Graph Convolutional Network for Dynamic Graphs](https://ieeexplore.ieee.org/document/9240056)
